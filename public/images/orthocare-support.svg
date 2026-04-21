@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Orthocare knee support">
+  <rect width="800" height="600" fill="#f3fbf9"/>
+  <path d="M332 92c88 42 122 112 92 210-20 68-10 138 42 206" fill="#fff" stroke="#047068" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M318 142c84 42 104 94 76 160-22 54-12 112 32 166" fill="none" stroke="#c7eee8" stroke-width="44" stroke-linecap="round"/>
+  <path d="M278 230h234M266 336h246" stroke="#034f4a" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="402" cy="286" r="34" fill="#047068"/>
+</svg>

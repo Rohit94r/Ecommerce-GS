@@ -6,7 +6,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 const variants: Record<Variant, string> = {
   primary: "bg-[#047068] text-white shadow-sm hover:bg-[#035d57]",
-  secondary: "border border-[#047068]/20 bg-white text-[#047068] hover:bg-[#eef8f6]",
+  secondary: "border border-[#047068]/25 bg-white text-[#034f4a] hover:bg-[#eef8f6]",
   ghost: "text-slate-700 hover:bg-slate-100",
   danger: "bg-red-600 text-white hover:bg-red-700",
 };
@@ -22,7 +22,7 @@ type LinkButtonProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
 };
 
 const base =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#047068]/30 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-extrabold transition focus:outline-none focus:ring-2 focus:ring-[#047068]/30 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function Button({ className, variant = "primary", ...props }: ButtonProps) {
   return <button className={cn(base, variants[variant], className)} {...props} />;

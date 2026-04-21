@@ -17,11 +17,16 @@ const CartContext = createContext<CartContextValue | null>(null);
 const CART_KEY = "gargi-cart";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    const saved = window.localStorage.getItem(CART_KEY);
-    return saved ? (JSON.parse(saved) as CartItem[]) : [];
-  });
+  const [items, setItems] = useState<CartItem[]>([]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const saved = window.localStorage.getItem(CART_KEY);
+      if (saved) setItems(JSON.parse(saved) as CartItem[]);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(CART_KEY, JSON.stringify(items));

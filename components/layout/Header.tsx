@@ -22,13 +22,20 @@ export function Header() {
   const { count } = useCart();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[#047068]/15 bg-white/95 backdrop-blur">
+      <div className="hidden border-b border-[#047068]/10 bg-[#034f4a] px-4 py-2 text-xs font-bold text-white md:block">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+          <span>{business.location} medical equipment supplier</span>
+          <span>Same Day / Next Day Delivery Available</span>
+          <span>{business.phone}</span>
+        </div>
+      </div>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3" aria-label={`${business.name} home`}>
-          <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#047068] text-lg font-black text-white">GS</span>
+          <span className="grid h-12 w-12 place-items-center rounded-md border border-[#047068]/20 bg-[#047068] text-2xl font-black leading-none text-white">+</span>
           <span>
-            <span className="block text-sm font-black leading-4 text-slate-950 sm:text-base">{business.name}</span>
-            <span className="text-xs font-semibold text-slate-500">Medical equipment Mumbai</span>
+            <span className="font-display block text-base font-bold leading-5 text-slate-950 sm:text-lg">{business.name}</span>
+            <span className="text-xs font-bold text-[#047068]">Surgical, oxygen and mobility care</span>
           </span>
         </Link>
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
@@ -37,14 +44,14 @@ export function Header() {
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-[#047068]",
-                pathname === link.href && "bg-[#047068]/10 text-[#047068]",
+                "rounded-md px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-[#eef8f6] hover:text-[#047068]",
+                pathname === link.href && "bg-[#047068]/10 text-[#034f4a]",
               )}
             >
               {link.label}
             </Link>
           ))}
-          <Link href="/cart" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+          <Link href="/cart" className="rounded-md px-3 py-2 text-sm font-bold text-slate-600 hover:bg-[#eef8f6]">
             Cart ({count})
           </Link>
         </nav>

@@ -1,16 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f6faf9;
+  --foreground: #17211f;
+  --medical: #047068;
+  --medical-deep: #034f4a;
   scroll-behavior: smooth;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
 }
 
 * {
@@ -21,6 +23,14 @@ body {
   min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
 }
 
 button,
@@ -33,6 +43,29 @@ textarea {
 
 .medical-band {
   background:
-    linear-gradient(135deg, rgba(4, 112, 104, 0.12), rgba(255, 255, 255, 0.88)),
-    radial-gradient(circle at 85% 20%, rgba(14, 165, 160, 0.16), transparent 34%);
+    linear-gradient(90deg, rgba(4, 112, 104, 0.06) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(4, 112, 104, 0.05) 1px, transparent 1px),
+    linear-gradient(135deg, #f6fbfa 0%, #ffffff 48%, #e9f6f4 100%);
+  background-size: 44px 44px, 44px 44px, auto;
+}
+
+.care-card {
+  border: 1px solid rgba(4, 112, 104, 0.14);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+}
+
+.clinical-rule {
+  position: relative;
+}
+
+.clinical-rule::before {
+  background: var(--medical);
+  border-radius: 999px;
+  content: "";
+  height: 3px;
+  left: 0;
+  position: absolute;
+  top: -14px;
+  width: 56px;
 }

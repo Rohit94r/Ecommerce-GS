@@ -27,8 +27,8 @@ export const products: Product[] = [
     price: 42500,
     category: "Oxygen on Rent",
     images: [
-      "https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1000&q=80",
+      "/images/oxygen-concentrator.svg",
+      "/images/clinical-equipment.svg",
     ],
     stock: 8,
     discount: 10,
@@ -44,8 +44,8 @@ export const products: Product[] = [
     price: 8900,
     category: "Mobility Products",
     images: [
-      "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1000&q=80",
+      "/images/wheelchair.svg",
+      "/images/home-care-room.svg",
     ],
     stock: 14,
     discount: 15,
@@ -61,8 +61,8 @@ export const products: Product[] = [
     price: 24500,
     category: "Hospital Equipment",
     images: [
-      "https://images.unsplash.com/photo-1519494080410-f9aa8f52f1e2?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=1000&q=80",
+      "/images/hospital-bed.svg",
+      "/images/home-care-room.svg",
     ],
     stock: 5,
     discount: 8,
@@ -78,8 +78,8 @@ export const products: Product[] = [
     price: 2290,
     category: "Wellness",
     images: [
-      "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?auto=format&fit=crop&w=1000&q=80",
+      "/images/wellness-kit.svg",
+      "/images/clinical-equipment.svg",
     ],
     stock: 22,
     discount: 12,
@@ -95,8 +95,8 @@ export const products: Product[] = [
     price: 1450,
     category: "Orthocare",
     images: [
-      "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1000&q=80",
+      "/images/orthocare-support.svg",
+      "/images/wellness-kit.svg",
     ],
     stock: 0,
     discount: 5,
@@ -112,8 +112,8 @@ export const products: Product[] = [
     price: 12900,
     category: "Hospital Equipment",
     images: [
-      "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&w=1000&q=80",
+      "/images/clinical-equipment.svg",
+      "/images/hospital-bed.svg",
     ],
     stock: 6,
     discount: 7,
@@ -137,7 +137,7 @@ export const blogs: Blog[] = [
     title: "How to Choose Oxygen Support for Home Care in Mumbai",
     slug: "choose-oxygen-support-home-care-mumbai",
     excerpt: "A practical guide to concentrators, cylinders and delivery planning for families.",
-    image: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1000&q=80",
+    image: "/images/oxygen-concentrator.svg",
     created_at: "2026-03-10",
     content:
       "Choosing oxygen support starts with the doctor's prescribed flow rate, duration of use and backup needs. Oxygen concentrators are ideal for steady home use, while cylinders are useful as backup or for movement. Families in Mumbai should also consider lift access, power backup and Same Day / Next Day Delivery Available options before confirming equipment.",
@@ -147,7 +147,7 @@ export const blogs: Blog[] = [
     title: "Wheelchair on Rent Mumbai: What to Check Before Booking",
     slug: "wheelchair-on-rent-mumbai-checklist",
     excerpt: "Comfort, brakes, seat width and delivery are the biggest rental checks.",
-    image: "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1000&q=80",
+    image: "/images/wheelchair.svg",
     created_at: "2026-02-21",
     content:
       "When renting a wheelchair, confirm seat width, folding frame, brake condition and whether the chair is suitable for indoor, outdoor or post-surgery use. For Mumbai homes, check doorway width and building access before delivery.",
@@ -157,7 +157,7 @@ export const blogs: Blog[] = [
     title: "Medical Equipment Mumbai: Building a Safe Home Recovery Setup",
     slug: "medical-equipment-mumbai-home-recovery",
     excerpt: "Hospital beds, oxygen, mobility and monitoring products that support recovery.",
-    image: "https://images.unsplash.com/photo-1519494080410-f9aa8f52f1e2?auto=format&fit=crop&w=1000&q=80",
+    image: "/images/hospital-bed.svg",
     created_at: "2026-01-18",
     content:
       "A safe home recovery setup usually combines a patient bed, mobility support, prescribed oxygen equipment and daily monitoring products. Keep walkways clear, place essentials near the patient and choose equipment that can be serviced locally.",
