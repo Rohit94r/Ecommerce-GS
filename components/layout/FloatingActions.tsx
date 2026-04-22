@@ -7,16 +7,16 @@ export function FloatingActions() {
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
       <Link
         href={whatsappLink("Hi Gargi Surgical & Healthcare, I need help with medical equipment in Mumbai.")}
-        className="rounded-lg bg-[#25D366] px-4 py-3 text-sm font-black text-white shadow-lg transition hover:translate-y-[-1px]"
+        className="rounded-lg bg-[#25D366] px-4 py-3 text-sm font-black text-white shadow-lg transition duration-300 ease-out hover:scale-[1.03]"
         target="_blank"
       >
         WhatsApp
       </Link>
       <Link
         href={`tel:${business.phone.replaceAll(" ", "")}`}
-        className="rounded-lg bg-[#047068] px-4 py-3 text-sm font-black text-white shadow-lg transition hover:translate-y-[-1px]"
+        className="rounded-lg bg-[#047068] px-4 py-3 text-sm font-black text-white shadow-lg transition duration-300 ease-out hover:scale-[1.03]"
       >
-        Call Now
+        Talk to us
       </Link>
     </div>
   );

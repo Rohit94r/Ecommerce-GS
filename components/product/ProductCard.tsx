@@ -13,10 +13,10 @@ export function ProductCard({ product }: { product: Product }) {
   const discountedPrice = product.price - Math.round((product.price * product.discount) / 100);
 
   return (
-    <article className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+    <article className="group overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10">
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-          <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-105" />
+          <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition duration-500 ease-out group-hover:scale-105" />
           <div className="absolute left-3 top-3 flex gap-2">
             {product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}
             {product.stock <= 0 ? <Badge tone="red">Out of Stock</Badge> : <Badge>In Stock</Badge>}

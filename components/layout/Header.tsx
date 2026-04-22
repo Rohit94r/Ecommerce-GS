@@ -22,10 +22,10 @@ export function Header() {
   const { count } = useCart();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.03] backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3" aria-label={`${business.name} home`}>
-          <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#047068] text-lg font-black text-white">GS</span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#047068] text-lg font-black text-white shadow-md shadow-[#047068]/20">GS</span>
           <span>
             <span className="block text-sm font-black leading-4 text-slate-950 sm:text-base">{business.name}</span>
             <span className="text-xs font-semibold text-slate-500">Medical equipment Mumbai</span>
@@ -50,9 +50,9 @@ export function Header() {
         </nav>
         <div className="hidden items-center gap-2 lg:flex">
           <LinkButton href={`tel:${business.phone.replaceAll(" ", "")}`} variant="secondary">
-            Call Now
+            Talk to our team
           </LinkButton>
-          <LinkButton href="/products">Shop Now</LinkButton>
+          <LinkButton href="/products">Browse Equipment</LinkButton>
         </div>
         <Button className="lg:hidden" onClick={() => setOpen((value) => !value)} variant="secondary" aria-label="Toggle menu">
           Menu
