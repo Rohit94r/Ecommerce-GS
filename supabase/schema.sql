@@ -123,6 +123,11 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Safe upgrades for databases that were created with an older version of this file.
+-- `create table if not exists` does not add new columns to existing tables.
+alter table public.orders
+  add column if not exists user_id uuid references auth.users(id) on delete set null;
+
 create index if not exists idx_subcategories_category_id on public.subcategories(category_id);
 create index if not exists idx_products_subcategory_id on public.products(subcategory_id);
 create index if not exists idx_products_category on public.products(category);
@@ -207,6 +212,18 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
 
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) in (
+    'sureshptl2006@gmail.com',
+    'gargihealthcaresales@gmail.com',
+    'rjdhav67@gmail.com'
+  );
+$$;
+
 alter table public.categories enable row level security;
 alter table public.subcategories enable row level security;
 alter table public.products enable row level security;
@@ -250,50 +267,50 @@ using (is_published = true);
 drop policy if exists "Authenticated users can manage categories" on public.categories;
 create policy "Authenticated users can manage categories"
 on public.categories for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Authenticated users can manage subcategories" on public.subcategories;
 create policy "Authenticated users can manage subcategories"
 on public.subcategories for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Authenticated users can manage products" on public.products;
 create policy "Authenticated users can manage products"
 on public.products for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Authenticated users can manage product images" on public.product_images;
 create policy "Authenticated users can manage product images"
 on public.product_images for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Authenticated users can manage rentals" on public.rentals;
 create policy "Authenticated users can manage rentals"
 on public.rentals for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Authenticated users can manage orders" on public.orders;
 create policy "Authenticated users can manage orders"
 on public.orders for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Authenticated users can manage order items" on public.order_items;
 create policy "Authenticated users can manage order items"
 on public.order_items for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Authenticated users can manage blogs" on public.blogs;
 create policy "Authenticated users can manage blogs"
 on public.blogs for all
-using (auth.role() = 'authenticated')
-with check (auth.role() = 'authenticated');
+using (public.is_admin())
+with check (public.is_admin());
 
 drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
@@ -340,42 +357,9 @@ with check (
   )
 );
 
--- Development admin dashboard policies.
--- The current dashboard has no login screen yet, so these policies allow the
--- browser publishable key to manage data. Remove these after adding admin auth.
-
 drop policy if exists "Development dashboard can manage products" on public.products;
-create policy "Development dashboard can manage products"
-on public.products for all
-using (true)
-with check (true);
-
 drop policy if exists "Development dashboard can manage product images" on public.product_images;
-create policy "Development dashboard can manage product images"
-on public.product_images for all
-using (true)
-with check (true);
-
 drop policy if exists "Development dashboard can manage rentals" on public.rentals;
-create policy "Development dashboard can manage rentals"
-on public.rentals for all
-using (true)
-with check (true);
-
 drop policy if exists "Development dashboard can manage orders" on public.orders;
-create policy "Development dashboard can manage orders"
-on public.orders for all
-using (true)
-with check (true);
-
 drop policy if exists "Development dashboard can manage order items" on public.order_items;
-create policy "Development dashboard can manage order items"
-on public.order_items for all
-using (true)
-with check (true);
-
 drop policy if exists "Development dashboard can manage blogs" on public.blogs;
-create policy "Development dashboard can manage blogs"
-on public.blogs for all
-using (true)
-with check (true);
