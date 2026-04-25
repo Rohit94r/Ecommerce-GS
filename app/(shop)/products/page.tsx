@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CategoryCard } from "@/components/product/catalog/CategoryCard";
+import { ProductSearchPanel } from "@/components/product/catalog/ProductSearchPanel";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { categories } from "@/lib/dummyData";
 
@@ -23,6 +24,7 @@ export default function ProductsPage() {
           <div className="mt-8 inline-flex rounded-full border border-[#047068]/20 bg-[#047068]/10 px-4 py-2 text-sm font-black text-[#047068]">
             Same Day / Next Day Delivery Available
           </div>
+          <ProductSearchPanel categories={categories} />
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
             {categories.map((category, index) => (
               <CategoryCard key={category.slug} category={category} index={index} />

@@ -81,6 +81,23 @@ textarea {
   animation-play-state: paused;
 }
 
+.home-products-track {
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.home-products-track::-webkit-scrollbar {
+  display: none;
+}
+
+.home-products-track.w-max {
+  animation: home-products-scroll 44s linear infinite;
+}
+
+.home-products-track:hover {
+  animation-play-state: paused;
+}
+
 .category-carousel {
   scroll-padding-inline: 1rem;
   scrollbar-width: none;
@@ -194,6 +211,16 @@ textarea {
   }
 }
 
+@keyframes home-products-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -216,5 +243,9 @@ textarea {
 
   .review-marquee-track {
     animation: none;
+  }
+
+  .home-products-track {
+    animation: none !important;
   }
 }

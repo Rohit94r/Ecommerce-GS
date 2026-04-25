@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcrumbs";
-import { CommerceProductCard } from "@/components/product/catalog/CommerceProductCard";
+import { CategoryProductGrid } from "@/components/product/catalog/CategoryProductGrid";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { getCategory } from "@/lib/catalog";
 import { categories } from "@/lib/dummyData";
@@ -52,11 +52,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
           </div>
 
           {availableProducts.length > 0 ? (
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {availableProducts.map(({ product, subcategory }) => (
-                <CommerceProductCard key={product.id} category={category} subcategory={subcategory} product={product} />
-              ))}
-            </div>
+            <CategoryProductGrid category={category} products={availableProducts} />
           ) : (
             <div className="mt-8 rounded-lg border border-dashed border-[#047068]/25 bg-white p-8 shadow-sm">
               <h3 className="text-xl font-black text-slate-950">Products are being updated</h3>

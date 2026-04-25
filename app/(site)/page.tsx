@@ -1,13 +1,14 @@
 import { CategoryCarousel } from "@/components/home/CategoryCarousel";
 import { HeroBanner } from "@/components/home/HeroBanner";
+import { HomeProductScroller } from "@/components/home/HomeProductScroller";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { ProductGrid } from "@/components/product/ProductGrid";
 import { getFeaturedGoogleReviews } from "@/lib/googleReviews";
-import { categories, partnerBrands, products } from "@/lib/dummyData";
+import { getHomepageProducts } from "@/lib/homeProducts";
+import { categories, partnerBrands } from "@/lib/dummyData";
 
 export default async function Home() {
-  const featuredProducts = products.slice(0, 3);
+  const homepageProducts = await getHomepageProducts();
   const googleReviews = await getFeaturedGoogleReviews();
   const scrollingReviews = googleReviews.length > 3 ? [...googleReviews, ...googleReviews] : googleReviews;
 
@@ -44,8 +45,8 @@ export default async function Home() {
 
       <section className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <SectionHeader eyebrow="Featured" title="Often requested in Mumbai" description="Practical essentials families and care teams ask for when comfort, safety and timing matter." />
-          <ProductGrid products={featuredProducts} />
+          <SectionHeader eyebrow="Homepage Products" title="Quick picks for everyday care" description="Compact product highlights controlled from the admin dashboard." />
+          <HomeProductScroller products={homepageProducts} />
         </div>
       </section>
 

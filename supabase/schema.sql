@@ -48,6 +48,8 @@ create table if not exists public.products (
   brand text not null default '',
   features text[] not null default '{}',
   is_featured boolean not null default false,
+  show_on_homepage boolean not null default false,
+  is_special_offer boolean not null default false,
   is_rental boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -140,6 +142,10 @@ create table if not exists public.google_reviews (
 alter table public.orders
   add column if not exists user_id uuid references auth.users(id) on delete set null;
 
+alter table public.products
+  add column if not exists show_on_homepage boolean not null default false,
+  add column if not exists is_special_offer boolean not null default false;
+
 alter table public.google_reviews
   add column if not exists reviewer_name text not null default '',
   add column if not exists area text not null default 'Mumbai',
@@ -153,6 +159,8 @@ create index if not exists idx_subcategories_category_id on public.subcategories
 create index if not exists idx_products_subcategory_id on public.products(subcategory_id);
 create index if not exists idx_products_category on public.products(category);
 create index if not exists idx_products_featured on public.products(is_featured);
+create index if not exists idx_products_homepage on public.products(show_on_homepage);
+create index if not exists idx_products_special_offer on public.products(is_special_offer);
 create index if not exists idx_product_images_product_id on public.product_images(product_id);
 create index if not exists idx_rentals_product_id on public.rentals(product_id);
 create index if not exists idx_orders_status on public.orders(status);

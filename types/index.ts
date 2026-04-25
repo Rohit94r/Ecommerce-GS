@@ -40,6 +40,9 @@ export type Product = {
   description: string;
   features: string[];
   brand: string;
+  showOnHomepage?: boolean;
+  specialOffer?: boolean;
+  featured?: boolean;
 };
 
 export type CartItem = {

@@ -25,6 +25,8 @@ type ProductRow = {
   brand: string | null;
   features: string[] | null;
   is_featured: boolean;
+  show_on_homepage: boolean | null;
+  is_special_offer: boolean | null;
   is_rental: boolean;
   product_images?: ProductImageRow[];
 };
@@ -72,7 +74,7 @@ type OrderRow = {
   status: Order["status"];
   order_items?: OrderItemRow[];
 };
-type AdminProduct = Product & { featured?: boolean };
+type AdminProduct = Product & { featured?: boolean; showOnHomepage?: boolean; specialOffer?: boolean };
 type AdminRental = Rental & { id?: string; name: string; description: string; image: string };
 type DraftProduct = {
   id?: string;
@@ -84,6 +86,8 @@ type DraftProduct = {
   images: string[];
   description: string;
   featured?: boolean;
+  showOnHomepage?: boolean;
+  specialOffer?: boolean;
 };
 
 const categoryOptions: ProductCategory[] = ["Hospital Equipment", "Mobility Products", "Oxygen on Rent", "Wellness", "Orthocare"];
@@ -178,6 +182,8 @@ function mapProduct(row: ProductRow): AdminProduct {
     features: row.features ?? [],
     brand: row.brand ?? "Gargi Care",
     featured: row.is_featured,
+    showOnHomepage: Boolean(row.show_on_homepage),
+    specialOffer: Boolean(row.is_special_offer),
   };
 }
 
@@ -460,11 +466,11 @@ export function ProductsAdmin() {
   }, [category, direction, items, query, sort]);
 
   function openAdd() {
-    setDraft({ name: "", category: "Wellness", price: 0, discount: 0, stock: 0, images: [], description: "", featured: false });
+    setDraft({ name: "", category: "Wellness", price: 0, discount: 0, stock: 0, images: [], description: "", featured: false, showOnHomepage: false, specialOffer: false });
   }
 
   function openEdit(product: AdminProduct) {
-    setDraft({ id: product.id, name: product.name, category: product.category, price: product.price, discount: product.discount, stock: product.stock, images: product.images, description: product.description, featured: product.featured });
+    setDraft({ id: product.id, name: product.name, category: product.category, price: product.price, discount: product.discount, stock: product.stock, images: product.images, description: product.description, featured: product.featured, showOnHomepage: product.showOnHomepage, specialOffer: product.specialOffer });
   }
 
   async function saveProduct() {
@@ -484,6 +490,8 @@ export function ProductsAdmin() {
       brand: "Gargi Care",
       features: ["Admin managed product"],
       is_featured: Boolean(draft.featured),
+      show_on_homepage: Boolean(draft.showOnHomepage),
+      is_special_offer: Boolean(draft.specialOffer),
       is_rental: false,
       is_active: true,
     };
@@ -523,6 +531,16 @@ export function ProductsAdmin() {
     }
   }
 
+  async function toggleProductFlag(product: AdminProduct, field: "show_on_homepage" | "is_special_offer") {
+    const currentValue = field === "show_on_homepage" ? Boolean(product.showOnHomepage) : Boolean(product.specialOffer);
+    const { error } = await supabase.from("products").update({ [field]: !currentValue }).eq("id", product.id);
+    if (error) show(cleanError(error), "error");
+    else {
+      show(field === "show_on_homepage" ? "Homepage visibility updated" : "Special offer updated");
+      await loadProducts();
+    }
+  }
+
   return (
     <div>
       <ToastView toast={toast} />
@@ -545,17 +563,28 @@ export function ProductsAdmin() {
         <TableShell>
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
-              <tr>{["Name", "Category", "Price", "Stock", "Discount", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr>
+              <tr>{["Name", "Category", "Price", "Stock", "Flags", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((product) => (
                 <tr key={product.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="relative h-12 w-12 overflow-hidden rounded-md bg-slate-100"><Image src={product.images[0] ?? defaultImage} alt={product.name} fill className="object-cover" /></div><span className="font-bold text-slate-900">{product.name}</span>{product.featured ? <Badge tone="amber">Featured</Badge> : null}</div></td>
+                  <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="relative h-12 w-12 overflow-hidden rounded-md bg-slate-100"><Image src={product.images[0] ?? defaultImage} alt={product.name} fill className="object-cover" /></div><span className="font-bold text-slate-900">{product.name}</span></div></td>
                   <td className="px-5 py-4">{product.category}</td>
                   <td className="px-5 py-4">{formatCurrency(product.price)}</td>
                   <td className="px-5 py-4"><Badge tone={product.stock > 0 ? "green" : "red"}>{product.stock}</Badge></td>
-                  <td className="px-5 py-4">{product.discount}%</td>
-                  <td className="px-5 py-4"><div className="flex gap-2"><Button variant="ghost" onClick={() => setViewing(product)}>View</Button><Button variant="secondary" onClick={() => openEdit(product)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(product)}>Delete</Button></div></td>
+                  <td className="px-5 py-4"><div className="flex flex-wrap gap-2">{product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}{product.featured ? <Badge tone="amber">Featured</Badge> : null}{product.showOnHomepage ? <Badge tone="green">Homepage</Badge> : null}{product.specialOffer ? <Badge tone="green">Special Offer</Badge> : null}</div></td>
+                  <td className="px-5 py-4">
+                    <details className="relative">
+                      <summary className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-600 shadow-sm transition hover:bg-slate-50">⋯</summary>
+                      <div className="absolute right-0 z-20 mt-2 grid w-56 gap-1 rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
+                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => setViewing(product)}>View</button>
+                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => openEdit(product)}>Edit</button>
+                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(product, "show_on_homepage")}>{product.showOnHomepage ? "Hide from Homepage" : "Show on Homepage"}</button>
+                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(product, "is_special_offer")}>{product.specialOffer ? "Unmark Special Offer" : "Mark Special Offer"}</button>
+                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50" onClick={() => setDeleting(product)}>Delete</button>
+                      </div>
+                    </details>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -570,7 +599,11 @@ export function ProductsAdmin() {
             <label className="text-sm font-bold text-slate-700">Price<Input type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
             <label className="text-sm font-bold text-slate-700">Discount<Input type="number" value={draft.discount} onChange={(event) => setDraft({ ...draft, discount: Number(event.target.value) })} /></label>
             <label className="text-sm font-bold text-slate-700">Stock<Input type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
-            <label className="flex items-center gap-3 pt-7 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.featured)} onChange={(event) => setDraft({ ...draft, featured: event.target.checked })} /> Featured product</label>
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:col-span-2 md:grid-cols-3">
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.showOnHomepage)} onChange={(event) => setDraft({ ...draft, showOnHomepage: event.target.checked })} /> Show on Homepage</label>
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.specialOffer)} onChange={(event) => setDraft({ ...draft, specialOffer: event.target.checked })} /> Special Offer</label>
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.featured)} onChange={(event) => setDraft({ ...draft, featured: event.target.checked })} /> Featured</label>
+            </div>
             <label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
             <label className="text-sm font-bold text-slate-700 md:col-span-2">Images<Input type="file" accept="image/*" multiple onChange={(event) => readFiles(event.target.files, (images) => setDraft({ ...draft, images }))} /></label>
             {draft.images.length > 0 ? <div className="flex flex-wrap gap-3 md:col-span-2">{draft.images.map((image) => <div key={image} className="relative h-20 w-20 overflow-hidden rounded-md bg-slate-100"><Image src={image} alt="Preview" fill className="object-cover" /></div>)}</div> : null}
