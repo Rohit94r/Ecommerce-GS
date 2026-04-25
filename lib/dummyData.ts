@@ -25,7 +25,7 @@ export const categories = [
     name: "Mobility",
     slug: "mobility",
     description: "Wheelchairs, walkers and daily movement support for safer home recovery.",
-    image: "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/product-mobility.svg",
     subcategories: [
       {
         name: "Wheelchairs",
@@ -37,7 +37,7 @@ export const categories = [
             price: 8500,
             discount: 10,
             stock: true,
-            image: "/products/wheelchair1.jpg",
+            image: "/media/hero-care.svg",
           },
           {
             id: "wc2",
@@ -45,7 +45,7 @@ export const categories = [
             price: 45000,
             discount: 5,
             stock: true,
-            image: "/products/wheelchair2.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -61,7 +61,7 @@ export const categories = [
     name: "Personal Hygiene",
     slug: "personal-hygiene",
     description: "Reliable hygiene essentials for adults, babies and everyday care routines.",
-    image: "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/product-hygiene.svg",
     subcategories: [
       {
         name: "Adult Diapers",
@@ -73,7 +73,7 @@ export const categories = [
             price: 799,
             discount: 12,
             stock: true,
-            image: "/products/adult-diaper.jpg",
+            image: "/media/hero-care.svg",
           },
           {
             id: "ad2",
@@ -81,7 +81,7 @@ export const categories = [
             price: 499,
             discount: 8,
             stock: true,
-            image: "/products/underpads.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -95,7 +95,7 @@ export const categories = [
             price: 649,
             discount: 10,
             stock: true,
-            image: "/products/baby-diaper.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -106,7 +106,7 @@ export const categories = [
     name: "Surgical",
     slug: "surgical",
     description: "Sterile surgical consumables, gloves and dressing support for clinics and homes.",
-    image: "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/product-surgical.svg",
     subcategories: [
       {
         name: "Gloves",
@@ -118,7 +118,7 @@ export const categories = [
             price: 550,
             discount: 7,
             stock: true,
-            image: "/products/gloves.jpg",
+            image: "/media/hero-care.svg",
           },
           {
             id: "sg2",
@@ -126,7 +126,7 @@ export const categories = [
             price: 690,
             discount: 9,
             stock: true,
-            image: "/products/nitrile-gloves.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -140,7 +140,7 @@ export const categories = [
             price: 299,
             discount: 5,
             stock: true,
-            image: "/products/gauze.jpg",
+            image: "/media/hero-care.svg",
           },
           {
             id: "dp2",
@@ -148,7 +148,7 @@ export const categories = [
             price: 180,
             discount: 0,
             stock: true,
-            image: "/products/medical-tape.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -159,7 +159,7 @@ export const categories = [
     name: "Orthopedic",
     slug: "orthopedic",
     description: "Knee, back and joint support products for recovery and everyday comfort.",
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/product-orthopedic.svg",
     subcategories: [
       {
         name: "Knee Support",
@@ -171,7 +171,7 @@ export const categories = [
             price: 899,
             discount: 10,
             stock: true,
-            image: "/products/knee-support.jpg",
+            image: "/media/hero-care.svg",
           },
           {
             id: "ks2",
@@ -179,7 +179,7 @@ export const categories = [
             price: 1699,
             discount: 12,
             stock: true,
-            image: "/products/knee-brace.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -193,7 +193,7 @@ export const categories = [
             price: 1199,
             discount: 10,
             stock: true,
-            image: "/products/back-support.jpg",
+            image: "/media/hero-care.svg",
           },
           {
             id: "bs2",
@@ -201,7 +201,7 @@ export const categories = [
             price: 999,
             discount: 15,
             stock: true,
-            image: "/products/posture-belt.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -212,7 +212,7 @@ export const categories = [
     name: "Digital Monitoring",
     slug: "digital-monitoring",
     description: "BP monitors, oximeters and home devices for daily health checks.",
-    image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/product-monitoring.svg",
     subcategories: [
       {
         name: "Blood Pressure Monitor",
@@ -224,7 +224,7 @@ export const categories = [
             price: 1999,
             discount: 15,
             stock: true,
-            image: "/products/bp.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -238,7 +238,7 @@ export const categories = [
             price: 999,
             discount: 20,
             stock: true,
-            image: "/products/oximeter.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -252,7 +252,7 @@ export const categories = [
             price: 249,
             discount: 5,
             stock: true,
-            image: "/products/thermometer.jpg",
+            image: "/media/hero-care.svg",
           },
           {
             id: "th2",
@@ -260,7 +260,7 @@ export const categories = [
             price: 1499,
             discount: 18,
             stock: true,
-            image: "/products/infrared-thermometer.jpg",
+            image: "/media/hero-care.svg",
           },
         ],
       },
@@ -270,72 +270,72 @@ export const categories = [
 
 export const commerceProductImages: Record<string, string[]> = {
   wc1: [
-    "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-mobility.svg",
+    "/media/hero-mobility.svg",
   ],
   wc2: [
-    "https://images.unsplash.com/photo-1579154341098-e4e158cc7f55?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
+    "/media/hero-mobility.svg",
+    "/media/product-mobility.svg",
   ],
   bp1: [
-    "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-monitoring.svg",
+    "/media/hero-monitoring.svg",
   ],
   ox1: [
-    "https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-monitoring.svg",
+    "/media/hero-monitoring.svg",
   ],
   ad1: [
-    "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-hygiene.svg",
+    "/media/hero-care.svg",
   ],
   ad2: [
-    "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-hygiene.svg",
+    "/media/hero-care.svg",
   ],
   bd1: [
-    "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-hygiene.svg",
+    "/media/hero-care.svg",
   ],
   sg1: [
-    "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-surgical.svg",
+    "/media/hero-care.svg",
   ],
   sg2: [
-    "https://images.unsplash.com/photo-1583912267550-d44c55a3e4eb?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-surgical.svg",
+    "/media/hero-care.svg",
   ],
   dp1: [
-    "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1580281657527-47f249e8f4df?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-surgical.svg",
+    "/media/hero-care.svg",
   ],
   dp2: [
-    "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-surgical.svg",
+    "/media/hero-care.svg",
   ],
   ks1: [
-    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-orthopedic.svg",
+    "/media/hero-care.svg",
   ],
   ks2: [
-    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-orthopedic.svg",
+    "/media/hero-care.svg",
   ],
   bs1: [
-    "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-orthopedic.svg",
+    "/media/hero-care.svg",
   ],
   bs2: [
-    "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-orthopedic.svg",
+    "/media/hero-care.svg",
   ],
   th1: [
-    "https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-monitoring.svg",
+    "/media/hero-monitoring.svg",
   ],
   th2: [
-    "https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1200&q=80",
+    "/media/product-monitoring.svg",
+    "/media/hero-monitoring.svg",
   ],
 };
 
@@ -346,8 +346,8 @@ export const products: Product[] = [
     price: 42500,
     category: "Oxygen on Rent",
     images: [
-      "https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1000&q=80",
+      "/media/hero-care.svg",
+      "/media/hero-care.svg",
     ],
     stock: 8,
     discount: 10,
@@ -363,8 +363,8 @@ export const products: Product[] = [
     price: 8900,
     category: "Mobility Products",
     images: [
-      "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1000&q=80",
+      "/media/hero-care.svg",
+      "/media/hero-care.svg",
     ],
     stock: 14,
     discount: 15,
@@ -380,8 +380,8 @@ export const products: Product[] = [
     price: 24500,
     category: "Hospital Equipment",
     images: [
-      "https://images.unsplash.com/photo-1519494080410-f9aa8f52f1e2?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=1000&q=80",
+      "/media/hero-care.svg",
+      "/media/hero-care.svg",
     ],
     stock: 5,
     discount: 8,
@@ -397,8 +397,8 @@ export const products: Product[] = [
     price: 2290,
     category: "Wellness",
     images: [
-      "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?auto=format&fit=crop&w=1000&q=80",
+      "/media/hero-care.svg",
+      "/media/hero-care.svg",
     ],
     stock: 22,
     discount: 12,
@@ -414,8 +414,8 @@ export const products: Product[] = [
     price: 1450,
     category: "Orthocare",
     images: [
-      "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1000&q=80",
+      "/media/hero-care.svg",
+      "/media/hero-care.svg",
     ],
     stock: 0,
     discount: 5,
@@ -431,8 +431,8 @@ export const products: Product[] = [
     price: 12900,
     category: "Hospital Equipment",
     images: [
-      "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&w=1000&q=80",
+      "/media/hero-care.svg",
+      "/media/hero-care.svg",
     ],
     stock: 6,
     discount: 7,
@@ -456,7 +456,7 @@ export const blogs: Blog[] = [
     title: "How to Choose Oxygen Support for Home Care in Mumbai",
     slug: "choose-oxygen-support-home-care-mumbai",
     excerpt: "A practical guide to concentrators, cylinders and delivery planning for families.",
-    image: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/hero-care.svg",
     created_at: "2026-03-10",
     content:
       "Choosing oxygen support starts with the doctor's prescribed flow rate, duration of use and backup needs. Oxygen concentrators are ideal for steady home use, while cylinders are useful as backup or for movement. Families in Mumbai should also consider lift access, power backup and Same Day / Next Day Delivery Available options before confirming equipment.",
@@ -466,7 +466,7 @@ export const blogs: Blog[] = [
     title: "Wheelchair on Rent Mumbai: What to Check Before Booking",
     slug: "wheelchair-on-rent-mumbai-checklist",
     excerpt: "Comfort, brakes, seat width and delivery are the biggest rental checks.",
-    image: "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/hero-care.svg",
     created_at: "2026-02-21",
     content:
       "When renting a wheelchair, confirm seat width, folding frame, brake condition and whether the chair is suitable for indoor, outdoor or post-surgery use. For Mumbai homes, check doorway width and building access before delivery.",
@@ -476,7 +476,7 @@ export const blogs: Blog[] = [
     title: "Medical Equipment Mumbai: Building a Safe Home Recovery Setup",
     slug: "medical-equipment-mumbai-home-recovery",
     excerpt: "Hospital beds, oxygen, mobility and monitoring products that support recovery.",
-    image: "https://images.unsplash.com/photo-1519494080410-f9aa8f52f1e2?auto=format&fit=crop&w=1000&q=80",
+    image: "/media/hero-care.svg",
     created_at: "2026-01-18",
     content:
       "A safe home recovery setup usually combines a patient bed, mobility support, prescribed oxygen equipment and daily monitoring products. Keep walkways clear, place essentials near the patient and choose equipment that can be serviced locally.",

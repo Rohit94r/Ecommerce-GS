@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CategoryCard } from "@/components/product/CategoryCard";
+import { CategoryCard } from "@/components/product/catalog/CategoryCard";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { categories } from "@/lib/dummyData";
 

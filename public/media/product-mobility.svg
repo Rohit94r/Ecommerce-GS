@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 750" role="img" aria-label="Mobility aid product">
+  <rect width="1000" height="750" fill="#f5f7f2"/>
+  <circle cx="370" cy="505" r="125" fill="#ffffff" stroke="#047068" stroke-width="34"/>
+  <circle cx="645" cy="545" r="62" fill="#ffffff" stroke="#047068" stroke-width="26"/>
+  <path d="M445 245h145l50 190H420l-46-190" fill="#d7ebe8"/>
+  <path d="M500 185h100M550 185v80M390 475l100-170M590 310l72 230" stroke="#047068" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

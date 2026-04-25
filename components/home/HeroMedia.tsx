@@ -2,15 +2,15 @@ import Image from "next/image";
 
 const slides = [
   {
-    src: "https://images.unsplash.com/photo-1519494080410-f9aa8f52f1e2?auto=format&fit=crop&w=1200&q=85",
+    src: "/media/hero-care.svg",
     alt: "Hospital bed prepared for a comfortable home recovery setup",
   },
   {
-    src: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1200&q=85",
+    src: "/media/hero-monitoring.svg",
     alt: "Doctor guiding a patient through dependable healthcare support",
   },
   {
-    src: "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1200&q=85",
+    src: "/media/hero-mobility.svg",
     alt: "Mobility equipment ready for daily patient care",
   },
 ];

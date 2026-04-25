@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CatalogBreadcrumbs } from "@/components/product/CatalogBreadcrumbs";
-import { CommerceProductCard } from "@/components/product/CommerceProductCard";
+import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcrumbs";
+import { CommerceProductCard } from "@/components/product/catalog/CommerceProductCard";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { getCategory } from "@/lib/catalog";
 import { categories } from "@/lib/dummyData";

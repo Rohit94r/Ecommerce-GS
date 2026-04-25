@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 750" role="img" aria-label="Personal hygiene medical product">
+  <rect width="1000" height="750" fill="#f7fbfa"/>
+  <rect x="260" y="140" width="480" height="470" rx="54" fill="#ffffff" stroke="#c9e4df" stroke-width="18"/>
+  <path d="M345 260h310M345 330h250M345 400h310" stroke="#047068" stroke-width="30" stroke-linecap="round"/>
+  <circle cx="690" cy="520" r="58" fill="#d7ebe8"/>
+  <path d="M660 520l24 24 52-68" fill="none" stroke="#047068" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 750" role="img" aria-label="Surgical medical supplies">
+  <rect width="1000" height="750" fill="#f4faf9"/>
+  <rect x="220" y="165" width="560" height="420" rx="40" fill="#ffffff" stroke="#c9e4df" stroke-width="18"/>
+  <path d="M340 265h320M340 365h320M430 205v300M570 205v300" stroke="#047068" stroke-width="28" stroke-linecap="round"/>
+  <rect x="305" y="520" width="390" height="46" rx="23" fill="#d7ebe8"/>
+</svg>
