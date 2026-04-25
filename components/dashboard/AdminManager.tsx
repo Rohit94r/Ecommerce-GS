@@ -1,28 +1,84 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { blogs, orders as seedOrders, products as seedProducts, rentals as seedRentals } from "@/lib/dummyData";
+import { createClient } from "@/utils/supabase/client";
 import { cn, formatCurrency, slugify } from "@/lib/utils";
-import type { Blog, Order, Product, Rental } from "@/types";
+import type { Blog, Order, Product, ProductCategory, Rental } from "@/types";
 
 type Toast = { message: string; tone: "success" | "error" };
 type SortDirection = "asc" | "desc";
+type ProductImageRow = { image_url: string; sort_order: number | null };
+type ProductRow = {
+  id: string;
+  name: string;
+  slug: string;
+  category: ProductCategory;
+  price: number | string;
+  discount: number | string;
+  stock: number;
+  description: string;
+  brand: string | null;
+  features: string[] | null;
+  is_featured: boolean;
+  is_rental: boolean;
+  product_images?: ProductImageRow[];
+};
+type BlogRow = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  image_url: string | null;
+  created_at: string;
+};
+type RentalRow = {
+  id: string;
+  product_id: string | null;
+  name: string;
+  slug: string;
+  price_per_day: number | string;
+  availability: boolean;
+  description: string;
+  image_url: string | null;
+};
+type OrderItemRow = {
+  product_id: string | null;
+  product_name: string;
+  unit_price: number | string;
+  quantity: number;
+};
+type OrderRow = {
+  id: string;
+  customer_name: string;
+  phone: string;
+  address: string;
+  total_price: number | string;
+  status: Order["status"];
+  order_items?: OrderItemRow[];
+};
 type AdminProduct = Product & { featured?: boolean };
-type AdminRental = Rental & { name: string; description: string; image: string };
-type DraftProduct = Omit<AdminProduct, "images" | "features" | "isRental" | "brand" | "stock"> & {
+type AdminRental = Rental & { id?: string; name: string; description: string; image: string };
+type DraftProduct = {
+  id?: string;
+  name: string;
+  category: ProductCategory;
+  price: number;
+  discount: number;
   stock: number;
   images: string[];
   description: string;
+  featured?: boolean;
 };
 
-const categoryOptions = ["Hospital Equipment", "Mobility Products", "Oxygen on Rent", "Wellness", "Orthocare"] as const;
-const productSeed: AdminProduct[] = seedProducts.map((product, index) => ({ ...product, featured: index < 3 }));
+const categoryOptions: ProductCategory[] = ["Hospital Equipment", "Mobility Products", "Oxygen on Rent", "Wellness", "Orthocare"];
 const defaultImage = "/media/hero-care.svg";
+const supabase = createClient();
 
 function ToastView({ toast }: { toast: Toast | null }) {
   if (!toast) return null;
@@ -36,16 +92,18 @@ function ToastView({ toast }: { toast: Toast | null }) {
 function useToast() {
   const [toast, setToast] = useState<Toast | null>(null);
 
-  function show(message: string, tone: Toast["tone"] = "success") {
+  const show = useCallback((message: string, tone: Toast["tone"] = "success") => {
     setToast({ message, tone });
-    window.setTimeout(() => setToast(null), 2200);
-  }
+    window.setTimeout(() => setToast(null), 2600);
+  }, []);
 
   return { toast, show };
 }
 
-function EmptyState({ text }: { text: string }) {
-  return <div className="rounded-lg border border-dashed border-slate-200 bg-white p-10 text-center font-semibold text-slate-500">{text}</div>;
+function cleanError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error && "message" in error) return String(error.message);
+  return "Something went wrong";
 }
 
 function SectionHeader({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
@@ -62,6 +120,10 @@ function SectionHeader({ title, description, action }: { title: string; descript
 
 function TableShell({ children }: { children: React.ReactNode }) {
   return <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5">{children}</div>;
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div className="rounded-lg border border-dashed border-slate-200 bg-white p-10 text-center font-semibold text-slate-500">{text}</div>;
 }
 
 function readFiles(files: FileList | null, onLoad: (images: string[]) => void) {
@@ -90,23 +152,127 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm }: { open: boo
   );
 }
 
+function mapProduct(row: ProductRow): AdminProduct {
+  const images = row.product_images?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((image) => image.image_url) ?? [];
+
+  return {
+    id: row.id,
+    name: row.name,
+    price: Number(row.price),
+    category: row.category,
+    images: images.length ? images : [defaultImage],
+    stock: row.stock,
+    discount: Number(row.discount),
+    isRental: row.is_rental,
+    description: row.description,
+    features: row.features ?? [],
+    brand: row.brand ?? "Gargi Care",
+    featured: row.is_featured,
+  };
+}
+
+function mapRental(row: RentalRow): AdminRental {
+  return {
+    id: row.id,
+    product_id: row.product_id ?? row.id,
+    name: row.name,
+    price_per_day: Number(row.price_per_day),
+    availability: row.availability,
+    description: row.description,
+    image: row.image_url ?? defaultImage,
+  };
+}
+
+function mapOrder(row: OrderRow): Order {
+  const items = row.order_items?.map((item) => ({
+    product: {
+      id: item.product_id ?? item.product_name,
+      name: item.product_name,
+      price: Number(item.unit_price),
+      category: "Wellness" as ProductCategory,
+      images: [defaultImage],
+      stock: 1,
+      discount: 0,
+      isRental: false,
+      description: "",
+      features: [],
+      brand: "Gargi Care",
+    },
+    quantity: item.quantity,
+  })) ?? [];
+
+  return {
+    id: row.id,
+    customer_name: row.customer_name,
+    phone: row.phone,
+    address: row.address,
+    total_price: Number(row.total_price),
+    status: row.status,
+    items,
+  };
+}
+
+function mapBlog(row: BlogRow): Blog {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    excerpt: row.excerpt,
+    content: row.content,
+    image: row.image_url ?? defaultImage,
+    created_at: row.created_at.slice(0, 10),
+  };
+}
+
 export function OverviewAdmin() {
-  const totalStock = seedProducts.reduce((sum, product) => sum + product.stock, 0);
-  const rentalRevenue = seedRentals.reduce((sum, rental) => sum + rental.price_per_day, 0);
+  const [stats, setStats] = useState({ products: 0, stock: 0, rentals: 0, orders: 0, rentalDaily: 0 });
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast, show } = useToast();
+
+  useEffect(() => {
+    async function loadOverview() {
+      setLoading(true);
+      const [productsResult, rentalsResult, ordersResult] = await Promise.all([
+        supabase.from("products").select("stock"),
+        supabase.from("rentals").select("price_per_day"),
+        supabase.from("orders").select("*, order_items(product_id, product_name, unit_price, quantity)").order("created_at", { ascending: false }).limit(5),
+      ]);
+
+      if (productsResult.error || rentalsResult.error || ordersResult.error) {
+        show(cleanError(productsResult.error ?? rentalsResult.error ?? ordersResult.error), "error");
+      } else {
+        const productRows = productsResult.data ?? [];
+        const rentalRows = rentalsResult.data ?? [];
+        setStats({
+          products: productRows.length,
+          stock: productRows.reduce((sum, product) => sum + Number(product.stock), 0),
+          rentals: rentalRows.length,
+          orders: ordersResult.data?.length ?? 0,
+          rentalDaily: rentalRows.reduce((sum, rental) => sum + Number(rental.price_per_day), 0),
+        });
+        setOrders(((ordersResult.data ?? []) as OrderRow[]).map(mapOrder));
+      }
+      setLoading(false);
+    }
+
+    loadOverview();
+  }, [show]);
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Overview" description="A quick operating view of products, rentals, orders and content." />
+      <ToastView toast={toast} />
+      <SectionHeader title="Overview" description="Live Supabase overview of products, rentals, orders and content." />
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          ["Products", seedProducts.length],
-          ["Stock Units", totalStock],
-          ["Rental SKUs", seedRentals.length],
-          ["Open Orders", seedOrders.length],
+          ["Products", stats.products],
+          ["Stock Units", stats.stock],
+          ["Rental SKUs", stats.rentals],
+          ["Recent Orders", stats.orders],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-slate-500">{label}</p>
-            <p className="mt-2 text-3xl font-black text-[#047068]">{value}</p>
+            <p className="mt-2 text-3xl font-black text-[#047068]">{loading ? "..." : value}</p>
           </div>
         ))}
       </div>
@@ -115,26 +281,28 @@ export function OverviewAdmin() {
           <div className="border-b border-slate-100 p-5">
             <h2 className="text-xl font-black text-slate-950">Recent orders</h2>
           </div>
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
-              <tr><th className="px-5 py-3">Customer</th><th className="px-5 py-3">Phone</th><th className="px-5 py-3">Total</th><th className="px-5 py-3">Status</th></tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {seedOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-4 font-bold text-slate-800">{order.customer_name}</td>
-                  <td className="px-5 py-4">{order.phone}</td>
-                  <td className="px-5 py-4">{formatCurrency(order.total_price)}</td>
-                  <td className="px-5 py-4"><Badge tone={order.status === "delivered" ? "green" : "amber"}>{order.status}</Badge></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {orders.length ? (
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
+                <tr><th className="px-5 py-3">Customer</th><th className="px-5 py-3">Phone</th><th className="px-5 py-3">Total</th><th className="px-5 py-3">Status</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-4 font-bold text-slate-800">{order.customer_name}</td>
+                    <td className="px-5 py-4">{order.phone}</td>
+                    <td className="px-5 py-4">{formatCurrency(order.total_price)}</td>
+                    <td className="px-5 py-4"><Badge tone={order.status === "delivered" ? "green" : "amber"}>{order.status}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <EmptyState text={loading ? "Loading orders..." : "No orders in Supabase yet."} />}
         </TableShell>
         <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-black text-slate-950">Rental pricing</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Current daily rental base across all dummy SKUs.</p>
-          <p className="mt-6 text-3xl font-black text-[#047068]">{formatCurrency(rentalRevenue)}/day</p>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Current daily rental base from Supabase rental SKUs.</p>
+          <p className="mt-6 text-3xl font-black text-[#047068]">{loading ? "..." : `${formatCurrency(stats.rentalDaily)}/day`}</p>
         </div>
       </div>
     </div>
@@ -142,7 +310,7 @@ export function OverviewAdmin() {
 }
 
 export function ProductsAdmin() {
-  const [items, setItems] = useState<AdminProduct[]>(productSeed);
+  const [items, setItems] = useState<AdminProduct[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<keyof Pick<Product, "name" | "price" | "stock" | "discount">>("name");
@@ -152,6 +320,21 @@ export function ProductsAdmin() {
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast, show } = useToast();
+
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("products").select("*, product_images(image_url, sort_order)").order("created_at", { ascending: false });
+    if (error) show(cleanError(error), "error");
+    else setItems(((data ?? []) as ProductRow[]).map(mapProduct));
+    setLoading(false);
+  }, [show]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadProducts();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadProducts]);
 
   const filtered = useMemo(() => {
     return items
@@ -165,47 +348,73 @@ export function ProductsAdmin() {
   }, [category, direction, items, query, sort]);
 
   function openAdd() {
-    setDraft({ id: `product-${Date.now()}`, name: "", category: "Wellness", price: 0, discount: 0, stock: 0, images: [], description: "", featured: false });
+    setDraft({ name: "", category: "Wellness", price: 0, discount: 0, stock: 0, images: [], description: "", featured: false });
   }
 
   function openEdit(product: AdminProduct) {
-    setDraft({ ...product, images: product.images, stock: product.stock, description: product.description });
+    setDraft({ id: product.id, name: product.name, category: product.category, price: product.price, discount: product.discount, stock: product.stock, images: product.images, description: product.description, featured: product.featured });
   }
 
-  function saveProduct() {
+  async function saveProduct() {
     if (!draft?.name.trim()) return show("Product name is required", "error");
     if (draft.price <= 0) return show("Price must be greater than 0", "error");
     if (draft.stock < 0) return show("Stock cannot be negative", "error");
     setLoading(true);
-    window.setTimeout(() => {
-      const product: AdminProduct = {
-        ...draft,
-        images: draft.images.length ? draft.images : [defaultImage],
-        stock: Number(draft.stock),
-        price: Number(draft.price),
-        discount: Number(draft.discount),
-        features: ["Admin managed product"],
-        isRental: false,
-        brand: "Gargi Care",
-      };
-      setItems((current) => (current.some((item) => item.id === product.id) ? current.map((item) => (item.id === product.id ? product : item)) : [product, ...current]));
-      setDraft(null);
+    const slug = slugify(draft.name);
+    const payload = {
+      name: draft.name,
+      slug,
+      category: draft.category,
+      price: draft.price,
+      discount: draft.discount,
+      stock: draft.stock,
+      description: draft.description,
+      brand: "Gargi Care",
+      features: ["Admin managed product"],
+      is_featured: Boolean(draft.featured),
+      is_rental: false,
+      is_active: true,
+    };
+    const result = draft.id
+      ? await supabase.from("products").update(payload).eq("id", draft.id).select("id").single()
+      : await supabase.from("products").insert(payload).select("id").single();
+
+    if (result.error) {
       setLoading(false);
-      show("Product saved");
-    }, 450);
+      return show(cleanError(result.error), "error");
+    }
+
+    const productId = result.data.id as string;
+    await supabase.from("product_images").delete().eq("product_id", productId);
+    const imageRows = (draft.images.length ? draft.images : [defaultImage]).map((image, index) => ({
+      product_id: productId,
+      image_url: image,
+      alt_text: draft.name,
+      sort_order: index,
+    }));
+    const imageResult = await supabase.from("product_images").insert(imageRows);
+    if (imageResult.error) show(cleanError(imageResult.error), "error");
+    else show("Product saved in Supabase");
+    setDraft(null);
+    await loadProducts();
+    setLoading(false);
   }
 
-  function deleteProduct() {
+  async function deleteProduct() {
     if (!deleting) return;
-    setItems((current) => current.filter((item) => item.id !== deleting.id));
-    setDeleting(null);
-    show("Product deleted");
+    const { error } = await supabase.from("products").delete().eq("id", deleting.id);
+    if (error) show(cleanError(error), "error");
+    else {
+      show("Product deleted from Supabase");
+      setDeleting(null);
+      await loadProducts();
+    }
   }
 
   return (
     <div>
       <ToastView toast={toast} />
-      <SectionHeader title="Products" description="Manage ecommerce product listings, stock, pricing, discounts and product images." action={<Button onClick={openAdd}>Add Product</Button>} />
+      <SectionHeader title="Products" description="Live Supabase product listings, stock, pricing, discounts and images." action={<Button onClick={openAdd}>Add Product</Button>} />
       <div className="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_180px_140px]">
         <Input placeholder="Search products" value={query} onChange={(event) => setQuery(event.target.value)} />
         <select value={category} onChange={(event) => setCategory(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm">
@@ -240,12 +449,12 @@ export function ProductsAdmin() {
             </tbody>
           </table>
         </TableShell>
-      ) : <EmptyState text="No products match your filters." />}
-      <Modal open={Boolean(draft)} title={draft?.name ? "Edit Product" : "Add Product"} onClose={() => setDraft(null)}>
+      ) : <EmptyState text={loading ? "Loading products from Supabase..." : "No Supabase products yet. Add your first product."} />}
+      <Modal open={Boolean(draft)} title={draft?.id ? "Edit Product" : "Add Product"} onClose={() => setDraft(null)}>
         {draft ? (
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
-            <label className="text-sm font-bold text-slate-700">Category<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value as Product["category"] })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{categoryOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
+            <label className="text-sm font-bold text-slate-700">Category<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value as ProductCategory })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{categoryOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
             <label className="text-sm font-bold text-slate-700">Price<Input type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
             <label className="text-sm font-bold text-slate-700">Discount<Input type="number" value={draft.discount} onChange={(event) => setDraft({ ...draft, discount: Number(event.target.value) })} /></label>
             <label className="text-sm font-bold text-slate-700">Stock<Input type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
@@ -258,100 +467,193 @@ export function ProductsAdmin() {
         ) : null}
       </Modal>
       <Modal open={Boolean(viewing)} title="Product Details" onClose={() => setViewing(null)}>{viewing ? <div className="space-y-3 text-sm text-slate-700"><p><b>Name:</b> {viewing.name}</p><p><b>Category:</b> {viewing.category}</p><p><b>Description:</b> {viewing.description}</p><p><b>Price:</b> {formatCurrency(viewing.price)}</p></div> : null}</Modal>
-      <ConfirmModal open={Boolean(deleting)} title="Delete product?" message={`Delete ${deleting?.name ?? "this product"}? This cannot be undone.`} onCancel={() => setDeleting(null)} onConfirm={deleteProduct} />
+      <ConfirmModal open={Boolean(deleting)} title="Delete product?" message={`Delete ${deleting?.name ?? "this product"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteProduct} />
     </div>
   );
 }
 
 export function RentalsAdmin() {
-  const rentalSeed: AdminRental[] = seedRentals.map((rental) => {
-    const product = seedProducts.find((item) => item.id === rental.product_id);
-    return { ...rental, name: product?.name ?? rental.product_id, description: product?.description ?? "", image: product?.images[0] ?? defaultImage };
-  });
-  const [items, setItems] = useState(rentalSeed);
+  const [items, setItems] = useState<AdminRental[]>([]);
   const [draft, setDraft] = useState<AdminRental | null>(null);
   const [deleting, setDeleting] = useState<AdminRental | null>(null);
   const [days, setDays] = useState(7);
+  const [loading, setLoading] = useState(false);
   const { toast, show } = useToast();
 
-  function saveRental() {
+  const loadRentals = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("rentals").select("*").order("created_at", { ascending: false });
+    if (error) show(cleanError(error), "error");
+    else setItems(((data ?? []) as RentalRow[]).map(mapRental));
+    setLoading(false);
+  }, [show]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadRentals();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadRentals]);
+
+  async function saveRental() {
     if (!draft?.name.trim()) return show("Rental name is required", "error");
     if (draft.price_per_day <= 0) return show("Price per day is required", "error");
-    setItems((current) => (current.some((item) => item.product_id === draft.product_id) ? current.map((item) => (item.product_id === draft.product_id ? draft : item)) : [draft, ...current]));
-    setDraft(null);
-    show("Rental saved");
+    setLoading(true);
+    const payload = {
+      name: draft.name,
+      slug: slugify(draft.name),
+      price_per_day: draft.price_per_day,
+      availability: draft.availability,
+      description: draft.description,
+      image_url: draft.image,
+      is_active: true,
+    };
+    const { error } = draft.id ? await supabase.from("rentals").update(payload).eq("id", draft.id) : await supabase.from("rentals").insert(payload);
+    if (error) show(cleanError(error), "error");
+    else {
+      setDraft(null);
+      show("Rental saved in Supabase");
+      await loadRentals();
+    }
+    setLoading(false);
+  }
+
+  async function deleteRental() {
+    if (!deleting?.id) return;
+    const { error } = await supabase.from("rentals").delete().eq("id", deleting.id);
+    if (error) show(cleanError(error), "error");
+    else {
+      setDeleting(null);
+      show("Rental deleted from Supabase");
+      await loadRentals();
+    }
   }
 
   return (
     <div>
       <ToastView toast={toast} />
-      <SectionHeader title="Rentals" description="Manage rental products, daily pricing and availability." action={<Button onClick={() => setDraft({ product_id: `rental-${Date.now()}`, name: "", price_per_day: 0, availability: true, description: "", image: defaultImage })}>Add Rental</Button>} />
+      <SectionHeader title="Rentals" description="Live Supabase rentals, daily pricing and availability." action={<Button onClick={() => setDraft({ product_id: "", name: "", price_per_day: 0, availability: true, description: "", image: defaultImage })}>Add Rental</Button>} />
       <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <label className="text-sm font-bold text-slate-700">Rental calculator<Input className="mt-2 max-w-xs" type="number" min={1} value={days} onChange={(event) => setDays(Number(event.target.value))} /></label>
       </div>
-      <TableShell>
-        <table className="w-full min-w-[820px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Product", "Price per day", "Availability", `${days} day estimate`, "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-100">
-            {items.map((rental) => (
-              <tr key={rental.product_id} className="hover:bg-slate-50">
-                <td className="px-5 py-4 font-bold text-slate-900">{rental.name}</td>
-                <td className="px-5 py-4">{formatCurrency(rental.price_per_day)}</td>
-                <td className="px-5 py-4"><Badge tone={rental.availability ? "green" : "red"}>{rental.availability ? "Available" : "Unavailable"}</Badge></td>
-                <td className="px-5 py-4 font-bold text-[#047068]">{formatCurrency(days * rental.price_per_day)}</td>
-                <td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(rental)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(rental)}>Delete</Button></div></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableShell>
-      <Modal open={Boolean(draft)} title="Rental Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><label className="text-sm font-bold text-slate-700">Price per day<Input type="number" value={draft.price_per_day} onChange={(event) => setDraft({ ...draft, price_per_day: Number(event.target.value) })} /></label><label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.availability} onChange={(event) => setDraft({ ...draft, availability: event.target.checked })} /> Available</label><label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label className="text-sm font-bold text-slate-700 md:col-span-2">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label><div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveRental}>Save Rental</Button></div></div> : null}</Modal>
-      <ConfirmModal open={Boolean(deleting)} title="Delete rental?" message={`Delete ${deleting?.name ?? "this rental"}?`} onCancel={() => setDeleting(null)} onConfirm={() => { if (deleting) setItems((current) => current.filter((item) => item.product_id !== deleting.product_id)); setDeleting(null); show("Rental deleted"); }} />
+      {items.length ? (
+        <TableShell>
+          <table className="w-full min-w-[820px] text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Product", "Price per day", "Availability", `${days} day estimate`, "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((rental) => (
+                <tr key={rental.id ?? rental.product_id} className="hover:bg-slate-50">
+                  <td className="px-5 py-4 font-bold text-slate-900">{rental.name}</td>
+                  <td className="px-5 py-4">{formatCurrency(rental.price_per_day)}</td>
+                  <td className="px-5 py-4"><Badge tone={rental.availability ? "green" : "red"}>{rental.availability ? "Available" : "Unavailable"}</Badge></td>
+                  <td className="px-5 py-4 font-bold text-[#047068]">{formatCurrency(days * rental.price_per_day)}</td>
+                  <td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(rental)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(rental)}>Delete</Button></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableShell>
+      ) : <EmptyState text={loading ? "Loading rentals from Supabase..." : "No rentals in Supabase yet."} />}
+      <Modal open={Boolean(draft)} title="Rental Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><label className="text-sm font-bold text-slate-700">Price per day<Input type="number" value={draft.price_per_day} onChange={(event) => setDraft({ ...draft, price_per_day: Number(event.target.value) })} /></label><label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.availability} onChange={(event) => setDraft({ ...draft, availability: event.target.checked })} /> Available</label><label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label className="text-sm font-bold text-slate-700 md:col-span-2">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-24 w-32 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Rental preview" fill className="object-cover" /></div> : null}<div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveRental} disabled={loading}>{loading ? "Saving..." : "Save Rental"}</Button></div></div> : null}</Modal>
+      <ConfirmModal open={Boolean(deleting)} title="Delete rental?" message={`Delete ${deleting?.name ?? "this rental"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteRental} />
     </div>
   );
 }
 
 export function OrdersAdmin() {
-  const [items, setItems] = useState<Order[]>(seedOrders);
+  const [items, setItems] = useState<Order[]>([]);
   const [viewing, setViewing] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
   const { toast, show } = useToast();
 
-  function updateStatus(id: string, status: Order["status"]) {
-    setItems((current) => current.map((order) => (order.id === id ? { ...order, status } : order)));
-    show("Order status updated");
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("orders").select("*, order_items(product_id, product_name, unit_price, quantity)").order("created_at", { ascending: false });
+    if (error) show(cleanError(error), "error");
+    else setItems(((data ?? []) as OrderRow[]).map(mapOrder));
+    setLoading(false);
+  }, [show]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadOrders();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadOrders]);
+
+  async function updateStatus(id: string, status: Order["status"]) {
+    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+    if (error) show(cleanError(error), "error");
+    else {
+      setItems((current) => current.map((order) => (order.id === id ? { ...order, status } : order)));
+      show("Order status updated in Supabase");
+    }
   }
 
   return (
     <div>
       <ToastView toast={toast} />
-      <SectionHeader title="Orders" description="Review customer orders, call customers and update fulfillment status." />
-      <TableShell><table className="w-full min-w-[980px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Customer name", "Phone", "Address", "Product", "Quantity", "Status", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{items.map((order) => <tr key={order.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-bold">{order.customer_name}</td><td className="px-5 py-4">{order.phone}</td><td className="px-5 py-4">{order.address}</td><td className="px-5 py-4">{order.items[0]?.product.name}</td><td className="px-5 py-4">{order.items.reduce((sum, item) => sum + item.quantity, 0)}</td><td className="px-5 py-4"><select value={order.status} onChange={(event) => updateStatus(order.id, event.target.value as Order["status"])} className="rounded-md border border-slate-200 px-3 py-2 text-sm"><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></td><td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setViewing(order)}>View details</Button><a href={`tel:${order.phone.replaceAll(" ", "")}`}><Button>Call customer</Button></a></div></td></tr>)}</tbody></table></TableShell>
+      <SectionHeader title="Orders" description="Live Supabase orders, customer call actions and fulfillment status." />
+      {items.length ? <TableShell><table className="w-full min-w-[980px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Customer name", "Phone", "Address", "Product", "Quantity", "Status", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{items.map((order) => <tr key={order.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-bold">{order.customer_name}</td><td className="px-5 py-4">{order.phone}</td><td className="px-5 py-4">{order.address}</td><td className="px-5 py-4">{order.items[0]?.product.name ?? "No items"}</td><td className="px-5 py-4">{order.items.reduce((sum, item) => sum + item.quantity, 0)}</td><td className="px-5 py-4"><select value={order.status} onChange={(event) => updateStatus(order.id, event.target.value as Order["status"])} className="rounded-md border border-slate-200 px-3 py-2 text-sm"><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></td><td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setViewing(order)}>View details</Button><a href={`tel:${order.phone.replaceAll(" ", "")}`}><Button>Call customer</Button></a></div></td></tr>)}</tbody></table></TableShell> : <EmptyState text={loading ? "Loading orders from Supabase..." : "No orders in Supabase yet."} />}
       <Modal open={Boolean(viewing)} title="Order Details" onClose={() => setViewing(null)}>{viewing ? <div className="space-y-3 text-sm text-slate-700"><p><b>Customer:</b> {viewing.customer_name}</p><p><b>Phone:</b> {viewing.phone}</p><p><b>Address:</b> {viewing.address}</p><p><b>Total:</b> {formatCurrency(viewing.total_price)}</p>{viewing.items.map((item) => <p key={item.product.id}><b>Item:</b> {item.quantity} x {item.product.name}</p>)}</div> : null}</Modal>
     </div>
   );
 }
 
 export function BlogsAdmin() {
-  const [items, setItems] = useState<Blog[]>(blogs);
+  const [items, setItems] = useState<Blog[]>([]);
   const [draft, setDraft] = useState<Blog | null>(null);
   const [deleting, setDeleting] = useState<Blog | null>(null);
+  const [loading, setLoading] = useState(false);
   const { toast, show } = useToast();
 
-  function saveBlog() {
+  const loadBlogs = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("blogs").select("*").order("created_at", { ascending: false });
+    if (error) show(cleanError(error), "error");
+    else setItems(((data ?? []) as BlogRow[]).map(mapBlog));
+    setLoading(false);
+  }, [show]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadBlogs();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadBlogs]);
+
+  async function saveBlog() {
     if (!draft?.title.trim()) return show("Blog title is required", "error");
-    const blog = { ...draft, slug: draft.slug || slugify(draft.title), created_at: draft.created_at || new Date().toISOString().slice(0, 10) };
-    setItems((current) => (current.some((item) => item.id === blog.id) ? current.map((item) => (item.id === blog.id ? blog : item)) : [blog, ...current]));
-    setDraft(null);
-    show("Blog saved");
+    setLoading(true);
+    const payload = { title: draft.title, slug: draft.slug || slugify(draft.title), excerpt: draft.excerpt, content: draft.content, image_url: draft.image, is_published: true, published_at: new Date().toISOString() };
+    const { error } = draft.id ? await supabase.from("blogs").update(payload).eq("id", draft.id) : await supabase.from("blogs").insert(payload);
+    if (error) show(cleanError(error), "error");
+    else {
+      setDraft(null);
+      show("Blog saved in Supabase");
+      await loadBlogs();
+    }
+    setLoading(false);
+  }
+
+  async function deleteBlog() {
+    if (!deleting) return;
+    const { error } = await supabase.from("blogs").delete().eq("id", deleting.id);
+    if (error) show(cleanError(error), "error");
+    else {
+      setDeleting(null);
+      show("Blog deleted from Supabase");
+      await loadBlogs();
+    }
   }
 
   return (
     <div>
       <ToastView toast={toast} />
-      <SectionHeader title="Blogs" description="Create and manage educational content for customers." action={<Button onClick={() => setDraft({ id: `blog-${Date.now()}`, title: "", slug: "", excerpt: "", content: "", image: defaultImage, created_at: new Date().toISOString().slice(0, 10) })}>Add Blog</Button>} />
-      <TableShell><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Title", "Date", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{items.map((blog) => <tr key={blog.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-bold text-slate-900">{blog.title}</td><td className="px-5 py-4">{blog.created_at}</td><td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(blog)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(blog)}>Delete</Button></div></td></tr>)}</tbody></table></TableShell>
-      <Modal open={Boolean(draft)} title="Blog Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4"><label className="text-sm font-bold text-slate-700">Title<Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value, slug: slugify(event.target.value) })} /></label><div><p className="text-sm font-bold text-slate-700">Content</p><div contentEditable suppressContentEditableWarning onInput={(event) => setDraft({ ...draft, content: event.currentTarget.innerHTML })} className="mt-1 min-h-40 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm leading-6 outline-none focus:border-[#047068] focus:ring-4 focus:ring-[#047068]/10" dangerouslySetInnerHTML={{ __html: draft.content }} /></div><label className="text-sm font-bold text-slate-700">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-28 w-44 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Blog preview" fill className="object-cover" /></div> : null}<div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveBlog}>Save Blog</Button></div></div> : null}</Modal>
-      <ConfirmModal open={Boolean(deleting)} title="Delete blog?" message={`Delete ${deleting?.title ?? "this blog"}?`} onCancel={() => setDeleting(null)} onConfirm={() => { if (deleting) setItems((current) => current.filter((item) => item.id !== deleting.id)); setDeleting(null); show("Blog deleted"); }} />
+      <SectionHeader title="Blogs" description="Live Supabase educational content for customers." action={<Button onClick={() => setDraft({ id: "", title: "", slug: "", excerpt: "", content: "", image: defaultImage, created_at: new Date().toISOString().slice(0, 10) })}>Add Blog</Button>} />
+      {items.length ? <TableShell><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Title", "Date", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{items.map((blog) => <tr key={blog.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-bold text-slate-900">{blog.title}</td><td className="px-5 py-4">{blog.created_at}</td><td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(blog)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(blog)}>Delete</Button></div></td></tr>)}</tbody></table></TableShell> : <EmptyState text={loading ? "Loading blogs from Supabase..." : "No blogs in Supabase yet."} />}
+      <Modal open={Boolean(draft)} title="Blog Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4"><label className="text-sm font-bold text-slate-700">Title<Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value, slug: slugify(event.target.value) })} /></label><div><p className="text-sm font-bold text-slate-700">Content</p><div contentEditable suppressContentEditableWarning onInput={(event) => setDraft({ ...draft, content: event.currentTarget.innerHTML })} className="mt-1 min-h-40 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm leading-6 outline-none focus:border-[#047068] focus:ring-4 focus:ring-[#047068]/10" dangerouslySetInnerHTML={{ __html: draft.content }} /></div><label className="text-sm font-bold text-slate-700">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-28 w-44 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Blog preview" fill className="object-cover" /></div> : null}<div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveBlog} disabled={loading}>{loading ? "Saving..." : "Save Blog"}</Button></div></div> : null}</Modal>
+      <ConfirmModal open={Boolean(deleting)} title="Delete blog?" message={`Delete ${deleting?.title ?? "this blog"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteBlog} />
     </div>
   );
 }

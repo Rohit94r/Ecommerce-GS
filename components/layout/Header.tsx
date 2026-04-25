@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { business } from "@/lib/dummyData";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
+import { createClient } from "@/utils/supabase/client";
 
 const links = [
   { href: "/", label: "Home" },
@@ -19,7 +20,32 @@ const links = [
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const { count } = useCart();
+  const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted) setUserEmail(data.user?.email ?? null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user.email ?? null);
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [supabase.auth]);
+
+  async function logout() {
+    await supabase.auth.signOut();
+    setUserEmail(null);
+    setOpen(false);
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.03] backdrop-blur">
@@ -47,11 +73,22 @@ export function Header() {
           <Link href="/cart" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
             Cart ({count})
           </Link>
+          {userEmail ? (
+            <Link href="/account" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+              Account
+            </Link>
+          ) : (
+            <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+              Login
+            </Link>
+          )}
         </nav>
         <div className="hidden items-center gap-2 lg:flex">
-          <LinkButton href={`tel:${business.phone.replaceAll(" ", "")}`} variant="secondary">
-            Talk to our team
-          </LinkButton>
+          {userEmail ? (
+            <Button onClick={logout} variant="secondary">Logout</Button>
+          ) : (
+            <LinkButton href="/signup" variant="secondary">Create Account</LinkButton>
+          )}
           <LinkButton href="/products">Browse Equipment</LinkButton>
         </div>
         <Button className="lg:hidden" onClick={() => setOpen((value) => !value)} variant="secondary" aria-label="Toggle menu">
@@ -69,6 +106,25 @@ export function Header() {
             <Link href="/cart" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-slate-700">
               Cart ({count})
             </Link>
+            {userEmail ? (
+              <>
+                <Link href="/account" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-slate-700">
+                  Account
+                </Link>
+                <button onClick={logout} className="rounded-lg px-3 py-3 text-left font-semibold text-slate-700">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-slate-700">
+                  Login
+                </Link>
+                <Link href="/signup" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-slate-700">
+                  Create Account
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       ) : null}
