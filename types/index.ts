@@ -80,3 +80,14 @@ export type Testimonial = {
   quote: string;
   rating: number;
 };
+
+export type GoogleReview = {
+  id: string;
+  reviewer_name: string;
+  area: string;
+  rating: number;
+  review: string;
+  source: string;
+  is_featured: boolean;
+  created_at: string;
+};

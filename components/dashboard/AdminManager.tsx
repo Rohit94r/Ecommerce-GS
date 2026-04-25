@@ -8,7 +8,7 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/utils/supabase/client";
 import { cn, formatCurrency, slugify } from "@/lib/utils";
-import type { Blog, Order, Product, ProductCategory, Rental } from "@/types";
+import type { Blog, GoogleReview, Order, Product, ProductCategory, Rental } from "@/types";
 
 type Toast = { message: string; tone: "success" | "error" };
 type SortDirection = "asc" | "desc";
@@ -46,6 +46,16 @@ type RentalRow = {
   availability: boolean;
   description: string;
   image_url: string | null;
+};
+type GoogleReviewRow = {
+  id: string;
+  reviewer_name: string;
+  area: string | null;
+  rating: number | string;
+  review: string;
+  source: string | null;
+  is_featured: boolean | null;
+  created_at: string;
 };
 type OrderItemRow = {
   product_id: string | null;
@@ -224,51 +234,102 @@ function mapBlog(row: BlogRow): Blog {
   };
 }
 
+function mapGoogleReview(row: GoogleReviewRow): GoogleReview {
+  return {
+    id: row.id,
+    reviewer_name: row.reviewer_name,
+    area: row.area ?? "Mumbai",
+    rating: Number(row.rating),
+    review: row.review,
+    source: row.source ?? "Google",
+    is_featured: Boolean(row.is_featured),
+    created_at: row.created_at.slice(0, 10),
+  };
+}
+
 export function OverviewAdmin() {
-  const [stats, setStats] = useState({ products: 0, stock: 0, rentals: 0, orders: 0, rentalDaily: 0 });
+  const [stats, setStats] = useState({
+    products: 0,
+    stock: 0,
+    lowStock: 0,
+    rentals: 0,
+    orders: 0,
+    pending: 0,
+    delivered: 0,
+    revenue: 0,
+    rentalDaily: 0,
+    reviews: 0,
+    averageRating: 0,
+  });
   const [orders, setOrders] = useState<Order[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<{ name: string; stock: number; category: string }[]>([]);
+  const [categoryMix, setCategoryMix] = useState<{ category: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast, show } = useToast();
 
-  useEffect(() => {
-    async function loadOverview() {
-      setLoading(true);
-      const [productsResult, rentalsResult, ordersResult] = await Promise.all([
-        supabase.from("products").select("stock"),
-        supabase.from("rentals").select("price_per_day"),
-        supabase.from("orders").select("*, order_items(product_id, product_name, unit_price, quantity)").order("created_at", { ascending: false }).limit(5),
-      ]);
+  const loadOverview = useCallback(async () => {
+    setLoading(true);
+    const [productsResult, rentalsResult, ordersResult, reviewsResult] = await Promise.all([
+      supabase.from("products").select("name, category, stock, price, discount"),
+      supabase.from("rentals").select("price_per_day"),
+      supabase.from("orders").select("*, order_items(product_id, product_name, unit_price, quantity)").order("created_at", { ascending: false }),
+      supabase.from("google_reviews").select("rating, is_featured"),
+    ]);
 
-      if (productsResult.error || rentalsResult.error || ordersResult.error) {
-        show(cleanError(productsResult.error ?? rentalsResult.error ?? ordersResult.error), "error");
-      } else {
-        const productRows = productsResult.data ?? [];
-        const rentalRows = rentalsResult.data ?? [];
-        setStats({
-          products: productRows.length,
-          stock: productRows.reduce((sum, product) => sum + Number(product.stock), 0),
-          rentals: rentalRows.length,
-          orders: ordersResult.data?.length ?? 0,
-          rentalDaily: rentalRows.reduce((sum, rental) => sum + Number(rental.price_per_day), 0),
-        });
-        setOrders(((ordersResult.data ?? []) as OrderRow[]).map(mapOrder));
-      }
-      setLoading(false);
+    if (productsResult.error || rentalsResult.error || ordersResult.error || reviewsResult.error) {
+      show(cleanError(productsResult.error ?? rentalsResult.error ?? ordersResult.error ?? reviewsResult.error), "error");
+    } else {
+      const productRows = productsResult.data ?? [];
+      const rentalRows = rentalsResult.data ?? [];
+      const orderRows = ((ordersResult.data ?? []) as OrderRow[]).map(mapOrder);
+      const reviewRows = reviewsResult.data ?? [];
+      const categoryCounts = productRows.reduce<Record<string, number>>((counts, product) => {
+        counts[String(product.category)] = (counts[String(product.category)] ?? 0) + 1;
+        return counts;
+      }, {});
+
+      setStats({
+        products: productRows.length,
+        stock: productRows.reduce((sum, product) => sum + Number(product.stock), 0),
+        lowStock: productRows.filter((product) => Number(product.stock) <= 3).length,
+        rentals: rentalRows.length,
+        orders: orderRows.length,
+        pending: orderRows.filter((order) => order.status === "pending").length,
+        delivered: orderRows.filter((order) => order.status === "delivered").length,
+        revenue: orderRows.reduce((sum, order) => sum + order.total_price, 0),
+        rentalDaily: rentalRows.reduce((sum, rental) => sum + Number(rental.price_per_day), 0),
+        reviews: reviewRows.length,
+        averageRating: reviewRows.length ? reviewRows.reduce((sum, review) => sum + Number(review.rating), 0) / reviewRows.length : 0,
+      });
+      setOrders(orderRows.slice(0, 6));
+      setLowStockProducts(productRows.filter((product) => Number(product.stock) <= 3).slice(0, 5).map((product) => ({ name: String(product.name), stock: Number(product.stock), category: String(product.category) })));
+      setCategoryMix(Object.entries(categoryCounts).map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count));
     }
-
-    loadOverview();
+    setLoading(false);
   }, [show]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadOverview();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadOverview]);
 
   return (
     <div className="space-y-6">
       <ToastView toast={toast} />
-      <SectionHeader title="Overview" description="Live Supabase overview of products, rentals, orders and content." />
-      <div className="grid gap-4 md:grid-cols-4">
+      <SectionHeader
+        title="Overview"
+        description="Live business snapshot from Supabase: products, stock health, rental value, orders and Google reviews."
+        action={<div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={loadOverview}>Refresh</Button></div>}
+      />
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
         {[
           ["Products", stats.products],
           ["Stock Units", stats.stock],
-          ["Rental SKUs", stats.rentals],
-          ["Recent Orders", stats.orders],
+          ["Low Stock", stats.lowStock],
+          ["Orders", stats.orders],
+          ["Revenue", formatCurrency(stats.revenue)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-slate-500">{label}</p>
@@ -276,7 +337,21 @@ export function OverviewAdmin() {
           </div>
         ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
+        {[
+          ["Pending orders", stats.pending],
+          ["Delivered orders", stats.delivered],
+          ["Rental SKUs", stats.rentals],
+          ["Google reviews", stats.reviews],
+          ["Google rating", stats.averageRating ? `${stats.averageRating.toFixed(1)} / 5` : "No reviews"],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+            <p className="mt-2 text-xl font-black text-slate-950">{loading ? "..." : value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <TableShell>
           <div className="border-b border-slate-100 p-5">
             <h2 className="text-xl font-black text-slate-950">Recent orders</h2>
@@ -299,10 +374,47 @@ export function OverviewAdmin() {
             </table>
           ) : <EmptyState text={loading ? "Loading orders..." : "No orders in Supabase yet."} />}
         </TableShell>
+        <div className="space-y-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-xl font-black text-slate-950">Quick actions</h2>
+            <div className="mt-4 grid gap-2">
+              <a href="/dashboard/products" className="rounded-lg bg-[#047068] px-4 py-3 text-sm font-black text-white transition hover:scale-[1.01]">Add or edit products</a>
+              <a href="/dashboard/orders" className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50">Manage order status</a>
+              <a href="/dashboard/reviews" className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50">Update Google reviews</a>
+            </div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-xl font-black text-slate-950">Rental pricing</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Current daily rental base from Supabase rental SKUs.</p>
+            <p className="mt-6 text-3xl font-black text-[#047068]">{loading ? "..." : `${formatCurrency(stats.rentalDaily)}/day`}</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-black text-slate-950">Rental pricing</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Current daily rental base from Supabase rental SKUs.</p>
-          <p className="mt-6 text-3xl font-black text-[#047068]">{loading ? "..." : `${formatCurrency(stats.rentalDaily)}/day`}</p>
+          <h2 className="text-xl font-black text-slate-950">Low stock watchlist</h2>
+          <div className="mt-4 grid gap-3">
+            {lowStockProducts.length ? lowStockProducts.map((product) => (
+              <div key={product.name} className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-4 py-3">
+                <span>
+                  <span className="block font-bold text-slate-900">{product.name}</span>
+                  <span className="text-xs font-semibold text-slate-500">{product.category}</span>
+                </span>
+                <Badge tone={product.stock > 0 ? "amber" : "red"}>{product.stock} left</Badge>
+              </div>
+            )) : <p className="text-sm font-semibold text-slate-500">{loading ? "Checking stock..." : "No low stock products."}</p>}
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-xl font-black text-slate-950">Category mix</h2>
+          <div className="mt-4 grid gap-3">
+            {categoryMix.length ? categoryMix.map((item) => (
+              <div key={item.category}>
+                <div className="mb-1 flex justify-between text-sm font-bold text-slate-700"><span>{item.category}</span><span>{item.count}</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-[#047068]" style={{ width: `${Math.max(8, (item.count / Math.max(stats.products, 1)) * 100)}%` }} /></div>
+              </div>
+            )) : <p className="text-sm font-semibold text-slate-500">{loading ? "Loading categories..." : "No product categories yet."}</p>}
+          </div>
         </div>
       </div>
     </div>
@@ -654,6 +766,124 @@ export function BlogsAdmin() {
       {items.length ? <TableShell><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Title", "Date", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{items.map((blog) => <tr key={blog.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-bold text-slate-900">{blog.title}</td><td className="px-5 py-4">{blog.created_at}</td><td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(blog)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(blog)}>Delete</Button></div></td></tr>)}</tbody></table></TableShell> : <EmptyState text={loading ? "Loading blogs from Supabase..." : "No blogs in Supabase yet."} />}
       <Modal open={Boolean(draft)} title="Blog Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4"><label className="text-sm font-bold text-slate-700">Title<Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value, slug: slugify(event.target.value) })} /></label><div><p className="text-sm font-bold text-slate-700">Content</p><div contentEditable suppressContentEditableWarning onInput={(event) => setDraft({ ...draft, content: event.currentTarget.innerHTML })} className="mt-1 min-h-40 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm leading-6 outline-none focus:border-[#047068] focus:ring-4 focus:ring-[#047068]/10" dangerouslySetInnerHTML={{ __html: draft.content }} /></div><label className="text-sm font-bold text-slate-700">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-28 w-44 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Blog preview" fill className="object-cover" /></div> : null}<div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveBlog} disabled={loading}>{loading ? "Saving..." : "Save Blog"}</Button></div></div> : null}</Modal>
       <ConfirmModal open={Boolean(deleting)} title="Delete blog?" message={`Delete ${deleting?.title ?? "this blog"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteBlog} />
+    </div>
+  );
+}
+
+export function ReviewsAdmin() {
+  const [items, setItems] = useState<GoogleReview[]>([]);
+  const [draft, setDraft] = useState<GoogleReview | null>(null);
+  const [deleting, setDeleting] = useState<GoogleReview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast, show } = useToast();
+
+  const loadReviews = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("google_reviews").select("*").order("created_at", { ascending: false });
+    if (error) show(cleanError(error), "error");
+    else setItems(((data ?? []) as GoogleReviewRow[]).map(mapGoogleReview));
+    setLoading(false);
+  }, [show]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadReviews();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadReviews]);
+
+  function openAdd() {
+    setDraft({
+      id: "",
+      reviewer_name: "",
+      area: "Mumbai",
+      rating: 5,
+      review: "",
+      source: "Google",
+      is_featured: true,
+      created_at: new Date().toISOString().slice(0, 10),
+    });
+  }
+
+  async function saveReview() {
+    if (!draft?.reviewer_name.trim()) return show("Reviewer name is required", "error");
+    if (!draft.review.trim()) return show("Review text is required", "error");
+    if (draft.rating < 1 || draft.rating > 5) return show("Rating must be between 1 and 5", "error");
+
+    setLoading(true);
+    const payload = {
+      reviewer_name: draft.reviewer_name,
+      area: draft.area || "Mumbai",
+      rating: draft.rating,
+      review: draft.review,
+      source: draft.source || "Google",
+      is_featured: draft.is_featured,
+    };
+    const { error } = draft.id ? await supabase.from("google_reviews").update(payload).eq("id", draft.id) : await supabase.from("google_reviews").insert(payload);
+
+    if (error) show(cleanError(error), "error");
+    else {
+      setDraft(null);
+      show("Google review saved in Supabase");
+      await loadReviews();
+    }
+    setLoading(false);
+  }
+
+  async function deleteReview() {
+    if (!deleting) return;
+    const { error } = await supabase.from("google_reviews").delete().eq("id", deleting.id);
+    if (error) show(cleanError(error), "error");
+    else {
+      setDeleting(null);
+      show("Google review deleted");
+      await loadReviews();
+    }
+  }
+
+  return (
+    <div>
+      <ToastView toast={toast} />
+      <SectionHeader
+        title="Google Reviews"
+        description="Manage the customer reviews shown on the homepage. Featured reviews appear publicly."
+        action={<Button onClick={openAdd}>Add Review</Button>}
+      />
+      {items.length ? (
+        <TableShell>
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
+              <tr>{["Reviewer", "Area", "Rating", "Review", "Visible", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((review) => (
+                <tr key={review.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-4 font-bold text-slate-900">{review.reviewer_name}</td>
+                  <td className="px-5 py-4">{review.area}</td>
+                  <td className="px-5 py-4 text-amber-500">{"★".repeat(Math.round(review.rating))}</td>
+                  <td className="px-5 py-4 text-slate-600">{review.review}</td>
+                  <td className="px-5 py-4"><Badge tone={review.is_featured ? "green" : "amber"}>{review.is_featured ? "Homepage" : "Hidden"}</Badge></td>
+                  <td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(review)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(review)}>Delete</Button></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableShell>
+      ) : <EmptyState text={loading ? "Loading reviews from Supabase..." : "No Google reviews yet. Add the first review."} />}
+      <Modal open={Boolean(draft)} title={draft?.id ? "Edit Google Review" : "Add Google Review"} onClose={() => setDraft(null)}>
+        {draft ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-bold text-slate-700">Reviewer name<Input value={draft.reviewer_name} onChange={(event) => setDraft({ ...draft, reviewer_name: event.target.value })} /></label>
+            <label className="text-sm font-bold text-slate-700">Area<Input value={draft.area} onChange={(event) => setDraft({ ...draft, area: event.target.value })} /></label>
+            <label className="text-sm font-bold text-slate-700">Rating<Input type="number" min={1} max={5} step={0.5} value={draft.rating} onChange={(event) => setDraft({ ...draft, rating: Number(event.target.value) })} /></label>
+            <label className="text-sm font-bold text-slate-700">Source<Input value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })} /></label>
+            <label className="text-sm font-bold text-slate-700 md:col-span-2">Review<Textarea value={draft.review} onChange={(event) => setDraft({ ...draft, review: event.target.value })} /></label>
+            <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.is_featured} onChange={(event) => setDraft({ ...draft, is_featured: event.target.checked })} /> Show on homepage</label>
+            <div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveReview} disabled={loading}>{loading ? "Saving..." : "Save Review"}</Button></div>
+          </div>
+        ) : null}
+      </Modal>
+      <ConfirmModal open={Boolean(deleting)} title="Delete review?" message={`Delete ${deleting?.reviewer_name ?? "this review"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteReview} />
     </div>
   );
 }

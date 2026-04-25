@@ -8,6 +8,7 @@ import { business } from "@/lib/dummyData";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { createClient } from "@/utils/supabase/client";
+import { isAdminEmail } from "@/lib/admin";
 
 const links = [
   { href: "/", label: "Home" },
@@ -23,6 +24,7 @@ export function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const { count } = useCart();
   const supabase = useMemo(() => createClient(), []);
+  const isAdmin = isAdminEmail(userEmail);
 
   useEffect(() => {
     let mounted = true;
@@ -84,6 +86,7 @@ export function Header() {
           )}
         </nav>
         <div className="hidden items-center gap-2 lg:flex">
+          {isAdmin ? <LinkButton href="/dashboard" variant="secondary">Dashboard</LinkButton> : null}
           {userEmail ? (
             <Button onClick={logout} variant="secondary">Logout</Button>
           ) : (
@@ -111,6 +114,11 @@ export function Header() {
                 <Link href="/account" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-slate-700">
                   Account
                 </Link>
+                {isAdmin ? (
+                  <Link href="/dashboard" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-[#047068]">
+                    Dashboard
+                  </Link>
+                ) : null}
                 <button onClick={logout} className="rounded-lg px-3 py-3 text-left font-semibold text-slate-700">
                   Logout
                 </button>

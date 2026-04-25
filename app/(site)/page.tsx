@@ -3,10 +3,12 @@ import { HeroBanner } from "@/components/home/HeroBanner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { ProductGrid } from "@/components/product/ProductGrid";
-import { categories, partnerBrands, products, testimonials } from "@/lib/dummyData";
+import { getFeaturedGoogleReviews } from "@/lib/googleReviews";
+import { categories, partnerBrands, products } from "@/lib/dummyData";
 
-export default function Home() {
+export default async function Home() {
   const featuredProducts = products.slice(0, 3);
+  const googleReviews = await getFeaturedGoogleReviews();
 
   return (
     <SiteShell>
@@ -55,14 +57,17 @@ export default function Home() {
 
       <section className="section-separator bg-white px-4 py-[4.5rem] sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <SectionHeader title="Trusted by Mumbai families" description="A little patience, clear guidance and dependable equipment can make a difficult week easier." />
+          <SectionHeader title="Google reviews from customers" description="Recent feedback from families and care teams who bought or rented medical equipment." />
           <div className="grid gap-5 md:grid-cols-3">
-            {testimonials.map((testimonial) => (
-              <article key={testimonial.id} className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10">
-                <p className="text-amber-500" aria-label={`${testimonial.rating} star rating`}>★★★★★</p>
-                <p className="mt-4 leading-7 text-slate-700">“{testimonial.quote}”</p>
-                <p className="mt-5 font-black text-slate-950">{testimonial.name}</p>
-                <p className="text-sm text-slate-500">{testimonial.area}, Mumbai</p>
+            {googleReviews.slice(0, 3).map((review) => (
+              <article key={review.id} className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-amber-500" aria-label={`${review.rating} star rating`}>{"★".repeat(Math.round(review.rating))}</p>
+                  <span className="rounded-full bg-[#047068]/10 px-3 py-1 text-xs font-black text-[#047068]">{review.source}</span>
+                </div>
+                <p className="mt-4 leading-7 text-slate-700">“{review.review}”</p>
+                <p className="mt-5 font-black text-slate-950">{review.reviewer_name}</p>
+                <p className="text-sm text-slate-500">{review.area}, Mumbai</p>
               </article>
             ))}
           </div>

@@ -22,6 +22,25 @@ export default function ContactPage() {
             <LinkButton href={`tel:${business.phone.replaceAll(" ", "")}`}>Click to call</LinkButton>
             <LinkButton href={whatsappLink("Hi Gargi Surgical & Healthcare, I need assistance.")} target="_blank" variant="secondary">WhatsApp</LinkButton>
           </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <a
+              href={whatsappLink("Hi Gargi Surgical & Healthcare, I need help choosing medical equipment.")}
+              target="_blank"
+              className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <span className="text-sm font-black uppercase tracking-[0.16em] text-emerald-600">WhatsApp support</span>
+              <span className="mt-2 block text-xl font-black text-slate-950">Quick product help</span>
+              <span className="mt-2 block text-sm leading-6 text-slate-600">Share your requirement and get a practical recommendation.</span>
+            </a>
+            <a
+              href={`tel:${business.phone.replaceAll(" ", "")}`}
+              className="rounded-xl border border-[#047068]/20 bg-[#047068]/10 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              <span className="text-sm font-black uppercase tracking-[0.16em] text-[#047068]">Talk to us</span>
+              <span className="mt-2 block text-xl font-black text-slate-950">Call for urgent needs</span>
+              <span className="mt-2 block text-sm leading-6 text-slate-600">Best for same day delivery, rentals and patient setup questions.</span>
+            </a>
+          </div>
           <div className="mt-8 rounded-md border border-[#047068]/15 bg-white p-6 shadow-sm">
             <h2 className="font-black text-slate-950">Business hours</h2>
             <p className="mt-2 text-slate-600">{business.hours}</p>

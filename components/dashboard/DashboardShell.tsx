@@ -10,6 +10,7 @@ const nav = [
   { href: "/dashboard/rentals", label: "Rentals" },
   { href: "/dashboard/orders", label: "Orders" },
   { href: "/dashboard/blogs", label: "Blogs" },
+  { href: "/dashboard/reviews", label: "Google Reviews" },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {

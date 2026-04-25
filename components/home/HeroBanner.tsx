@@ -19,17 +19,17 @@ const sliderBanners = [...heroBanners, heroBanners[0]];
 export function HeroBanner() {
   return (
     <section className="overflow-hidden bg-white">
-      <div className="relative h-[38vw] min-h-[300px] max-h-[620px] overflow-hidden bg-white">
+      <div className="relative w-full overflow-hidden bg-white">
         <div className="hero-banner-track flex h-full w-[300%]">
           {sliderBanners.map((banner, index) => (
-            <div key={`${banner.src}-${index}`} className="relative h-full w-1/3 shrink-0 bg-white">
+            <div key={`${banner.src}-${index}`} className="relative aspect-[16/7] min-h-[260px] w-1/3 shrink-0 bg-white sm:min-h-[360px] lg:min-h-[520px]">
               <Image
                 src={banner.src}
                 alt={banner.alt}
                 fill
                 priority={index === 0}
                 sizes="100vw"
-                className="object-cover"
+                className="object-contain"
                 style={{ objectPosition: banner.position }}
               />
             </div>

@@ -123,10 +123,31 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.google_reviews (
+  id uuid primary key default gen_random_uuid(),
+  reviewer_name text not null,
+  area text not null default 'Mumbai',
+  rating numeric(2, 1) not null default 5 check (rating >= 1 and rating <= 5),
+  review text not null,
+  source text not null default 'Google',
+  is_featured boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Safe upgrades for databases that were created with an older version of this file.
 -- `create table if not exists` does not add new columns to existing tables.
 alter table public.orders
   add column if not exists user_id uuid references auth.users(id) on delete set null;
+
+alter table public.google_reviews
+  add column if not exists reviewer_name text not null default '',
+  add column if not exists area text not null default 'Mumbai',
+  add column if not exists rating numeric(2, 1) not null default 5 check (rating >= 1 and rating <= 5),
+  add column if not exists review text not null default '',
+  add column if not exists source text not null default 'Google',
+  add column if not exists is_featured boolean not null default true,
+  add column if not exists updated_at timestamptz not null default now();
 
 create index if not exists idx_subcategories_category_id on public.subcategories(category_id);
 create index if not exists idx_products_subcategory_id on public.products(subcategory_id);
@@ -139,6 +160,7 @@ create index if not exists idx_orders_user_id on public.orders(user_id);
 create index if not exists idx_order_items_order_id on public.order_items(order_id);
 create index if not exists idx_blogs_slug on public.blogs(slug);
 create index if not exists idx_profiles_email on public.profiles(email);
+create index if not exists idx_google_reviews_featured on public.google_reviews(is_featured);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -183,6 +205,11 @@ for each row execute function public.set_updated_at();
 drop trigger if exists set_profiles_updated_at on public.profiles;
 create trigger set_profiles_updated_at
 before update on public.profiles
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_google_reviews_updated_at on public.google_reviews;
+create trigger set_google_reviews_updated_at
+before update on public.google_reviews
 for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_user()
@@ -233,6 +260,7 @@ alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.blogs enable row level security;
 alter table public.profiles enable row level security;
+alter table public.google_reviews enable row level security;
 
 drop policy if exists "Public can read active categories" on public.categories;
 create policy "Public can read active categories"
@@ -263,6 +291,11 @@ drop policy if exists "Public can read published blogs" on public.blogs;
 create policy "Public can read published blogs"
 on public.blogs for select
 using (is_published = true);
+
+drop policy if exists "Public can read featured google reviews" on public.google_reviews;
+create policy "Public can read featured google reviews"
+on public.google_reviews for select
+using (is_featured = true);
 
 drop policy if exists "Authenticated users can manage categories" on public.categories;
 create policy "Authenticated users can manage categories"
@@ -309,6 +342,12 @@ with check (public.is_admin());
 drop policy if exists "Authenticated users can manage blogs" on public.blogs;
 create policy "Authenticated users can manage blogs"
 on public.blogs for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "Authenticated users can manage google reviews" on public.google_reviews;
+create policy "Authenticated users can manage google reviews"
+on public.google_reviews for all
 using (public.is_admin())
 with check (public.is_admin());
 
@@ -363,3 +402,4 @@ drop policy if exists "Development dashboard can manage rentals" on public.renta
 drop policy if exists "Development dashboard can manage orders" on public.orders;
 drop policy if exists "Development dashboard can manage order items" on public.order_items;
 drop policy if exists "Development dashboard can manage blogs" on public.blogs;
+drop policy if exists "Development dashboard can manage google reviews" on public.google_reviews;
