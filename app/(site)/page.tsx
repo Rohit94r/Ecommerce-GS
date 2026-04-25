@@ -1,38 +1,34 @@
 import Link from "next/link";
-import { HeroMedia } from "@/components/home/HeroMedia";
-import { LinkButton } from "@/components/ui/Button";
+import { HeroBanner } from "@/components/home/HeroBanner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { ProductGrid } from "@/components/product/ProductGrid";
-import { business, categories, partnerBrands, products, testimonials } from "@/lib/dummyData";
+import { categories, partnerBrands, products, testimonials } from "@/lib/dummyData";
 
 export default function Home() {
   const featuredProducts = products.slice(0, 3);
 
   return (
     <SiteShell>
-      <section className="medical-band">
-        <div className="mx-auto grid min-h-[78vh] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
-          <div className="animate-rise">
-            <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#047068]">5.0 Google rating from Mumbai families</p>
-            <h1 className="mt-5 max-w-3xl text-4xl font-black text-slate-950 sm:text-5xl lg:text-6xl">
-              Medical equipment that helps home care feel less overwhelming.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              Gargi Surgical & Healthcare brings hospital beds, oxygen support, mobility aids and daily wellness essentials to homes, clinics and hospitals across Mumbai, with guidance that feels steady and personal.
-            </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <LinkButton href="/products">Browse Equipment</LinkButton>
-              <LinkButton href="/rentals" variant="secondary">Get equipment on rent</LinkButton>
-              <LinkButton href={`tel:${business.phone.replaceAll(" ", "")}`} variant="secondary">Talk to our team</LinkButton>
+      <HeroBanner />
+
+      <section className="border-y border-slate-100 bg-white">
+        <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 text-sm font-bold text-slate-700 sm:grid-cols-3 sm:px-6 lg:px-8">
+          {[
+            ["Delivery", "Same Day / Next Day"],
+            ["Support", "Home and Hospital"],
+            ["Quality", "Checked Equipment"],
+          ].map(([label, value]) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#047068]/10 text-xs font-black text-[#047068]">
+                {label.slice(0, 1)}
+              </span>
+              <span>
+                <span className="block text-xs uppercase tracking-[0.14em] text-slate-400">{label}</span>
+                <span className="block text-slate-800">{value}</span>
+              </span>
             </div>
-            <div className="mt-9 grid gap-3 text-sm font-bold text-slate-700 sm:grid-cols-3">
-              {["Same-day or next-day delivery", "Bulk support for clinics", "Clean, checked rental equipment"].map((item) => (
-                <div key={item} className="rounded-xl border border-white/80 bg-white/75 p-4 shadow-sm shadow-[#047068]/5 backdrop-blur transition duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md">{item}</div>
-              ))}
-            </div>
-          </div>
-          <HeroMedia />
+          ))}
         </div>
       </section>
 
