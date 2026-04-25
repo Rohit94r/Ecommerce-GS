@@ -46,6 +46,16 @@ export function ProductCard({ product }: { product: Product }) {
             {cartQuantity > 0 ? `Add More (${cartQuantity})` : "Add"}
           </Button>
         </div>
+        {cartQuantity > 0 ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link href="/cart" className="inline-flex h-10 items-center justify-center rounded-lg border border-[#047068]/20 bg-white px-3 text-sm font-black text-[#047068] transition hover:bg-[#eef8f6]">
+              View Cart
+            </Link>
+            <Link href="/checkout" className="inline-flex h-10 items-center justify-center rounded-lg bg-[#047068] px-3 text-sm font-black text-white transition hover:bg-[#035d57]">
+              Purchase
+            </Link>
+          </div>
+        ) : null}
       </div>
     </article>
   );

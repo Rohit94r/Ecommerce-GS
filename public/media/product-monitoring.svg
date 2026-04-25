@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 750" role="img" aria-label="Digital monitoring device">
-  <rect width="1000" height="750" fill="#eef7fb"/>
-  <rect x="245" y="145" width="510" height="420" rx="52" fill="#ffffff" stroke="#c9e4df" stroke-width="18"/>
-  <rect x="325" y="225" width="350" height="160" rx="24" fill="#047068"/>
-  <path d="M365 305h70l35-58 48 116 40-72h78" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="405" cy="465" r="30" fill="#d7ebe8"/>
-  <circle cx="500" cy="465" r="30" fill="#d7ebe8"/>
-  <circle cx="595" cy="465" r="30" fill="#d7ebe8"/>
-</svg>

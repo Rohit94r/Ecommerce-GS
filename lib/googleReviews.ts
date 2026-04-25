@@ -1,4 +1,3 @@
-import { testimonials } from "@/lib/dummyData";
 import { createClient } from "@/utils/supabase/server";
 import type { GoogleReview } from "@/types";
 
@@ -12,19 +11,6 @@ type GoogleReviewRow = {
   is_featured: boolean | null;
   created_at: string;
 };
-
-function fallbackReviews(): GoogleReview[] {
-  return testimonials.map((testimonial) => ({
-    id: testimonial.id,
-    reviewer_name: testimonial.name,
-    area: testimonial.area,
-    rating: testimonial.rating,
-    review: testimonial.quote,
-    source: "Google",
-    is_featured: true,
-    created_at: new Date().toISOString(),
-  }));
-}
 
 function mapReview(row: GoogleReviewRow): GoogleReview {
   return {
@@ -47,12 +33,12 @@ export async function getFeaturedGoogleReviews() {
       .select("id, reviewer_name, area, rating, review, source, is_featured, created_at")
       .eq("is_featured", true)
       .order("created_at", { ascending: false })
-      .limit(6);
+      .limit(20);
 
-    if (error || !data?.length) return fallbackReviews();
+    if (error || !data?.length) return [];
 
     return (data as GoogleReviewRow[]).map(mapReview);
   } catch {
-    return fallbackReviews();
+    return [];
   }
 }

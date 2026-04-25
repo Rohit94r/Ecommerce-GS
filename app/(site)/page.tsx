@@ -9,6 +9,7 @@ import { categories, partnerBrands, products } from "@/lib/dummyData";
 export default async function Home() {
   const featuredProducts = products.slice(0, 3);
   const googleReviews = await getFeaturedGoogleReviews();
+  const scrollingReviews = googleReviews.length > 3 ? [...googleReviews, ...googleReviews] : googleReviews;
 
   return (
     <SiteShell>
@@ -58,18 +59,31 @@ export default async function Home() {
       <section className="section-separator bg-white px-4 py-[4.5rem] sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader title="Google reviews from customers" description="Recent feedback from families and care teams who bought or rented medical equipment." />
-          <div className="grid gap-5 md:grid-cols-3">
-            {googleReviews.slice(0, 3).map((review) => (
-              <article key={review.id} className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-amber-500" aria-label={`${review.rating} star rating`}>{"★".repeat(Math.round(review.rating))}</p>
-                  <span className="rounded-full bg-[#047068]/10 px-3 py-1 text-xs font-black text-[#047068]">{review.source}</span>
-                </div>
-                <p className="mt-4 leading-7 text-slate-700">“{review.review}”</p>
-                <p className="mt-5 font-black text-slate-950">{review.reviewer_name}</p>
-                <p className="text-sm text-slate-500">{review.area}, Mumbai</p>
-              </article>
-            ))}
+          <div className="overflow-hidden">
+            {scrollingReviews.length ? (
+              <div className={`flex gap-5 ${googleReviews.length > 3 ? "review-marquee-track w-max" : "snap-x overflow-x-auto pb-3"}`}>
+                {scrollingReviews.map((review, index) => (
+                  <article key={`${review.id}-${index}`} className="min-h-[230px] w-[82vw] shrink-0 snap-start rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10 sm:w-[360px]">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-amber-500" aria-label={`${review.rating} star rating`}>{"★".repeat(Math.round(review.rating))}</p>
+                      <span className="rounded-full bg-[#047068]/10 px-3 py-1 text-xs font-black text-[#047068]">{review.source}</span>
+                    </div>
+                    <p className="mt-4 line-clamp-4 leading-7 text-slate-700">“{review.review}”</p>
+                    <p className="mt-5 font-black text-slate-950">{review.reviewer_name}</p>
+                    <p className="text-sm text-slate-500">{review.area}, Mumbai</p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-3">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="min-h-[210px] rounded-xl border border-dashed border-slate-200 bg-white p-6 shadow-sm shadow-slate-900/5">
+                    <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Google Review</p>
+                    <p className="mt-5 text-sm leading-7 text-slate-500">Reviews added from the dashboard will appear here.</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="mt-14 rounded-2xl border border-slate-200 bg-slate-50/80 p-6 shadow-inner shadow-white">
             <p className="text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500">Partner brands</p>

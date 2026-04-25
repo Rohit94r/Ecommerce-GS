@@ -69,6 +69,14 @@ textarea {
   animation: hero-banner-dot-two 8s ease-in-out infinite;
 }
 
+.review-marquee-track {
+  animation: review-marquee 38s linear infinite;
+}
+
+.review-marquee-track:hover {
+  animation-play-state: paused;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -138,6 +146,16 @@ textarea {
   }
 }
 
+@keyframes review-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 0.625rem));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -154,6 +172,10 @@ textarea {
 
   .hero-banner-dot-one,
   .hero-banner-dot-two {
+    animation: none;
+  }
+
+  .review-marquee-track {
     animation: none;
   }
 }

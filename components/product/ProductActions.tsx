@@ -22,14 +22,28 @@ export function ProductActions({ product }: { product: Product }) {
         <Button disabled={product.stock <= 0} onClick={() => addItem(product)} className="sm:flex-1">
           {cartQuantity > 0 ? `Add More (${cartQuantity})` : "Add to Cart"}
         </Button>
-        <Link
-          href={whatsappLink(`Hi ${business.name}, I need a bulk order quote for ${product.name}.`)}
-          target="_blank"
-          className="inline-flex h-11 items-center justify-center rounded-md border border-[#047068]/20 bg-white px-4 text-sm font-bold text-[#047068] transition hover:bg-[#eef8f6] sm:flex-1"
-        >
-          Call for bulk order
-        </Link>
+        {cartQuantity > 0 ? (
+          <Link
+            href="/checkout"
+            className="inline-flex h-11 items-center justify-center rounded-md bg-[#047068] px-4 text-sm font-black text-white transition hover:bg-[#035d57] sm:flex-1"
+          >
+            Purchase Now
+          </Link>
+        ) : (
+          <Link
+            href={whatsappLink(`Hi ${business.name}, I need a bulk order quote for ${product.name}.`)}
+            target="_blank"
+            className="inline-flex h-11 items-center justify-center rounded-md border border-[#047068]/20 bg-white px-4 text-sm font-bold text-[#047068] transition hover:bg-[#eef8f6] sm:flex-1"
+          >
+            Call for bulk order
+          </Link>
+        )}
       </div>
+      {cartQuantity > 0 ? (
+        <Link href="/cart" className="inline-flex h-11 items-center justify-center rounded-md border border-[#047068]/20 bg-white px-4 text-sm font-black text-[#047068] transition hover:bg-[#eef8f6]">
+          View Cart
+        </Link>
+      ) : null}
     </div>
   );
 }
