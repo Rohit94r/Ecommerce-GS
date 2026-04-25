@@ -159,7 +159,7 @@ export const categories = [
     name: "Orthopedic",
     slug: "orthopedic",
     description: "Knee, back and joint support products for recovery and everyday comfort.",
-    image: "/media/product-orthopedic.svg",
+    image: "/media/product-orthopedic.png",
     subcategories: [
       {
         name: "Knee Support",
@@ -314,19 +314,19 @@ export const commerceProductImages: Record<string, string[]> = {
     "/media/hero-care.svg",
   ],
   ks1: [
-    "/media/product-orthopedic.svg",
+    "/media/product-orthopedic.png",
     "/media/hero-care.svg",
   ],
   ks2: [
-    "/media/product-orthopedic.svg",
+    "/media/product-orthopedic.png",
     "/media/hero-care.svg",
   ],
   bs1: [
-    "/media/product-orthopedic.svg",
+    "/media/product-orthopedic.png",
     "/media/hero-care.svg",
   ],
   bs2: [
-    "/media/product-orthopedic.svg",
+    "/media/product-orthopedic.png",
     "/media/hero-care.svg",
   ],
   th1: [

@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 750" role="img" aria-label="Orthopedic support product">
-  <rect width="1000" height="750" fill="#f8faf7"/>
-  <path d="M380 130c160 80 220 215 175 385-24 90-78 145-158 165" fill="none" stroke="#047068" stroke-width="70" stroke-linecap="round"/>
-  <path d="M360 260h270M345 365h285M320 470h255" stroke="#d7ebe8" stroke-width="48" stroke-linecap="round"/>
-  <circle cx="620" cy="580" r="68" fill="#ffffff" stroke="#047068" stroke-width="22"/>
-</svg>
