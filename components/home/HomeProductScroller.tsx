@@ -10,7 +10,7 @@ import type { Product } from "@/types";
 export function HomeProductScroller({ products }: { products: Product[] }) {
   const { addItem, items } = useCart();
   const visibleProducts = products.length > 0 ? products : [];
-  const scrollingProducts = visibleProducts.length > 6 ? [...visibleProducts, ...visibleProducts] : visibleProducts;
+  const scrollingProducts = visibleProducts.length > 8 ? [...visibleProducts, ...visibleProducts] : visibleProducts;
 
   if (!visibleProducts.length) {
     return (
@@ -27,13 +27,13 @@ export function HomeProductScroller({ products }: { products: Product[] }) {
 
   return (
     <div className="overflow-hidden">
-      <div className={`home-products-track grid grid-flow-col grid-rows-2 gap-4 overflow-x-auto pb-3 ${visibleProducts.length > 6 ? "w-max" : ""}`}>
+      <div className={`home-products-track grid grid-flow-col grid-rows-2 gap-4 overflow-x-auto pb-3 ${visibleProducts.length > 8 ? "w-max" : ""}`}>
         {scrollingProducts.map((product, index) => {
           const discountedPrice = Math.round(product.price - (product.price * product.discount) / 100);
           const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
 
           return (
-            <article key={`${product.id}-${index}`} className="w-[230px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10 sm:w-[250px]">
+            <article key={`${product.id}-${index}`} className="w-[72vw] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10 sm:w-[290px] lg:w-[calc((1280px-48px)/4)]">
               <Link href="/products" className="block">
                 <div className="relative aspect-[4/3] bg-slate-100">
                   <Image src={product.images[0]} alt={product.name} fill sizes="250px" className="object-cover" />

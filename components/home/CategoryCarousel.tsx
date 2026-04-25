@@ -10,7 +10,7 @@ const categoryImages: Record<string, string> = {
   "personal-hygiene": "/media/Personal-hygiene.png",
   surgical: "/media/Surgical.png",
   orthopedic: "/media/orthopedic.png",
-  "digital-monitoring": "/media/Home-banner3.png",
+  "digital-monitoring": "/media/digital-monitoring.png",
 };
 
 export function CategoryCarousel({ categories }: { categories: CommerceCategory[] }) {

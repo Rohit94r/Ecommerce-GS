@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { getBlog } from "@/lib/dummyData";
+import { getPublishedBlog } from "@/lib/blogs";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const blog = getBlog(slug);
+  const blog = await getPublishedBlog(slug);
   return {
     title: blog ? blog.title : "Blog",
     description: blog?.excerpt ?? "Healthcare equipment guide from Gargi Surgical & Healthcare.",
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const blog = getBlog(slug);
+  const blog = await getPublishedBlog(slug);
   if (!blog) notFound();
 
   return (

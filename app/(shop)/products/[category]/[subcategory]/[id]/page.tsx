@@ -6,19 +6,10 @@ import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcru
 import { CommerceProductActions } from "@/components/product/catalog/CommerceProductActions";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { getCommerceProduct, getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductImages } from "@/lib/catalog";
-import { categories } from "@/lib/dummyData";
 import { formatCurrency } from "@/lib/utils";
 
-export function generateStaticParams() {
-  return categories.flatMap((category) =>
-    category.subcategories.flatMap((subcategory) =>
-      subcategory.products.map((product) => ({
-        category: category.slug,
-        subcategory: subcategory.slug,
-        id: product.id,
-      })),
-    ),
-  );
+export function generateStaticParams(): { category: string; subcategory: string; id: string }[] {
+  return [];
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; subcategory: string; id: string }> }): Promise<Metadata> {

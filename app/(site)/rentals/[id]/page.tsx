@@ -3,11 +3,11 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { RentalCalculator } from "@/components/rental/RentalCalculator";
-import { getRentalProduct } from "@/lib/dummyData";
+import { getActiveRental } from "@/lib/rentals";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const item = getRentalProduct(id);
+  const item = await getActiveRental(id);
   return {
     title: item ? `${item.product.name} Rental` : "Rental",
     description: item ? `${item.product.name} rental in Mumbai with daily pricing.` : "Medical rental equipment in Mumbai.",
@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function RentalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const item = getRentalProduct(id);
+  const item = await getActiveRental(id);
   if (!item) notFound();
 
   return (
