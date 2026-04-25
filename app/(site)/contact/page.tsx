@@ -45,6 +45,9 @@ export default function ContactPage() {
             <h2 className="font-black text-slate-950">Business hours</h2>
             <p className="mt-2 text-slate-600">{business.hours}</p>
             <p className="mt-2 text-slate-600">{business.address}</p>
+            <p className="mt-2 text-slate-600">
+              <a href={`mailto:${business.email}`} className="font-bold text-[#047068]">{business.email}</a>
+            </p>
           </div>
         </div>
         <div className="rounded-md border border-[#047068]/15 bg-white p-6 shadow-sm">
@@ -55,8 +58,17 @@ export default function ContactPage() {
             <Textarea placeholder="Tell us what you need" aria-label="Message" />
             <Button type="button">Submit enquiry</Button>
           </form>
-          <div className="mt-6 overflow-hidden rounded-md border border-[#047068]/15">
+          <div className="relative mt-6 overflow-hidden rounded-md border border-[#047068]/15">
             <iframe title="Gargi Surgical & Healthcare location map" src={business.mapsEmbed} className="h-72 w-full" loading="lazy" />
+            <a
+              href={business.mapsUrl}
+              target="_blank"
+              className="absolute inset-0"
+              aria-label="Open Gargi Surgical & Healthcare on Google Maps"
+            />
+            <span className="absolute bottom-4 left-4 rounded-lg bg-white px-4 py-2 text-sm font-black text-[#047068] shadow-md">
+              Open in Google Maps
+            </span>
           </div>
         </div>
       </section>

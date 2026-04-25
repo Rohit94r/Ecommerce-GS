@@ -10,8 +10,17 @@ export function Footer() {
           <p className="mt-3 max-w-md text-sm leading-7 text-slate-300">
             Trusted medical equipment, wheelchair on rent Mumbai services, oxygen cylinder Mumbai support and healthcare essentials for homes, clinics and hospitals.
           </p>
-          <div className="mt-5 overflow-hidden rounded-md border border-white/10">
+          <div className="relative mt-5 overflow-hidden rounded-md border border-white/10">
             <iframe title="Gargi Surgical & Healthcare map" src={business.mapsEmbed} className="h-52 w-full" loading="lazy" />
+            <span className="absolute bottom-3 left-3 rounded-md bg-white px-3 py-2 text-xs font-black text-[#047068] shadow-sm">
+              Open in Google Maps
+            </span>
+            <Link
+              href={business.mapsUrl}
+              target="_blank"
+              className="absolute inset-0"
+              aria-label="Open Gargi Surgical & Healthcare on Google Maps"
+            />
           </div>
         </div>
         <div>
@@ -31,7 +40,7 @@ export function Footer() {
           <ul className="mt-4 space-y-2 text-sm text-slate-300">
             <li>{business.address}</li>
             <li><Link href={`tel:${business.phone.replaceAll(" ", "")}`}>{business.phone}</Link></li>
-            <li>{business.email}</li>
+            <li><Link href={`mailto:${business.email}`}>{business.email}</Link></li>
             <li>{business.hours}</li>
           </ul>
         </div>

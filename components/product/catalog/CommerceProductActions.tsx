@@ -16,12 +16,20 @@ export function CommerceProductActions({
   subcategory: CommerceSubcategory;
   product: CommerceProduct;
 }) {
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
+  const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
+  const cartProduct = toCartProduct(product, category, subcategory);
 
   return (
-    <div className="mt-8 grid gap-3 sm:grid-cols-2">
-      <Button disabled={!product.stock} onClick={() => addItem(toCartProduct(product, category, subcategory))} className="w-full">
-        Add to Cart
+    <div className="mt-8 grid gap-3">
+      {cartQuantity > 0 ? (
+        <div className="rounded-lg border border-[#047068]/20 bg-[#047068]/10 px-4 py-3 text-sm font-black text-[#047068]">
+          Added to cart: {cartQuantity} item{cartQuantity > 1 ? "s" : ""}
+        </div>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2">
+      <Button disabled={!product.stock} onClick={() => addItem(cartProduct)} className="w-full">
+        {cartQuantity > 0 ? `Add More (${cartQuantity})` : "Add to Cart"}
       </Button>
       <Link
         href={`tel:${business.phone.replaceAll(" ", "")}`}
@@ -29,6 +37,7 @@ export function CommerceProductActions({
       >
         Call Now
       </Link>
+      </div>
     </div>
   );
 }

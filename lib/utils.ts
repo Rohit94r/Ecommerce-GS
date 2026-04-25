@@ -1,3 +1,5 @@
+import { business } from "@/lib/dummyData";
+
 export function cn(...inputs: Array<string | false | null | undefined>) {
   return inputs.filter(Boolean).join(" ");
 }
@@ -11,7 +13,7 @@ export function formatCurrency(value: number) {
 }
 
 export function whatsappLink(message: string) {
-  return `https://wa.me/919820000000?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${business.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
 }
 
 export function slugify(value: string) {

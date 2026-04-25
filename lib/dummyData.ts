@@ -3,13 +3,14 @@ import type { Blog, Order, Product, ProductCategory, Rental, Testimonial } from 
 export const business = {
   name: "Gargi Surgical & Healthcare",
   location: "Mumbai, India",
-  phone: "+91 98200 00000",
-  whatsapp: "+91 98200 00000",
-  email: "care@gargisurgical.example",
-  address: "Shop No. 12, Andheri East, Mumbai, Maharashtra 400069",
-  hours: "Mon-Sat: 9:00 AM - 8:30 PM",
+  phone: "+91 98921 68180",
+  whatsapp: "+91 98921 68180",
+  email: "gargihealthcaresales@gmail.com",
+  address: "Shop no-6, Shree Vallabh Building, Mathuradas Road, Kandivali, Bhagat Colony, Kandivali West, Mumbai, Maharashtra 400067",
+  hours: "Open every day: 9:00 AM - 10:00 PM",
+  mapsUrl: "https://maps.app.goo.gl/n9ysXs9ueYqJaEnk9",
   mapsEmbed:
-    "https://www.google.com/maps?q=Mumbai%2C%20India&output=embed",
+    "https://www.google.com/maps?q=Shop%20no-6%2C%20Shree%20Vallabh%20Building%2C%20Mathuradas%20Road%2C%20Kandivali%20West%2C%20Mumbai%2C%20Maharashtra%20400067&output=embed",
 };
 
 export const serviceCategories: { name: ProductCategory; description: string }[] = [
