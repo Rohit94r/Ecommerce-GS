@@ -18,7 +18,11 @@ export function Footer() {
           <h3 className="font-bold">Services</h3>
           <ul className="mt-4 space-y-2 text-sm text-slate-300">
             {categories.map((category) => (
-              <li key={category.name}>{category.name}</li>
+              <li key={category.name}>
+                <Link href={`/products/${category.slug}`} className="transition hover:text-white">
+                  {category.name}
+                </Link>
+              </li>
             ))}
           </ul>
         </div>

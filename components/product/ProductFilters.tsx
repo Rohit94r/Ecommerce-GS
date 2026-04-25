@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { Input } from "@/components/ui/Input";
-import { categories, products } from "@/lib/dummyData";
+import { products, serviceCategories } from "@/lib/dummyData";
 import type { ProductCategory } from "@/types";
 
 export function ProductFilters() {
@@ -33,7 +33,7 @@ export function ProductFilters() {
           className="mt-2 w-full rounded-md border border-[#047068]/15 bg-white px-3 py-3 text-sm outline-none focus:border-[#047068]"
         >
           <option>All</option>
-          {categories.map((item) => (
+          {serviceCategories.map((item) => (
             <option key={item.name}>{item.name}</option>
           ))}
         </select>

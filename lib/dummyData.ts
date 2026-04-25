@@ -12,13 +12,332 @@ export const business = {
     "https://www.google.com/maps?q=Mumbai%2C%20India&output=embed",
 };
 
-export const categories: { name: ProductCategory; description: string }[] = [
+export const serviceCategories: { name: ProductCategory; description: string }[] = [
   { name: "Hospital Equipment", description: "Beds, monitors, suction machines and clinical essentials." },
   { name: "Mobility Products", description: "Wheelchairs, walkers, rollators and patient transfer support." },
   { name: "Oxygen on Rent", description: "Oxygen concentrators and cylinders for home-care needs." },
   { name: "Wellness", description: "Daily health monitoring, recovery and home wellness products." },
   { name: "Orthocare", description: "Braces, supports, belts and post-operative care products." },
 ];
+
+export const categories = [
+  {
+    name: "Mobility",
+    slug: "mobility",
+    description: "Wheelchairs, walkers and daily movement support for safer home recovery.",
+    image: "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1000&q=80",
+    subcategories: [
+      {
+        name: "Wheelchairs",
+        slug: "wheelchairs",
+        products: [
+          {
+            id: "wc1",
+            name: "Foldable Wheelchair",
+            price: 8500,
+            discount: 10,
+            stock: true,
+            image: "/products/wheelchair1.jpg",
+          },
+          {
+            id: "wc2",
+            name: "Electric Wheelchair",
+            price: 45000,
+            discount: 5,
+            stock: true,
+            image: "/products/wheelchair2.jpg",
+          },
+        ],
+      },
+      {
+        name: "Walkers",
+        slug: "walkers",
+        products: [],
+      },
+    ],
+  },
+
+  {
+    name: "Personal Hygiene",
+    slug: "personal-hygiene",
+    description: "Reliable hygiene essentials for adults, babies and everyday care routines.",
+    image: "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=1000&q=80",
+    subcategories: [
+      {
+        name: "Adult Diapers",
+        slug: "adult-diapers",
+        products: [
+          {
+            id: "ad1",
+            name: "Adult Diaper Pants Large",
+            price: 799,
+            discount: 12,
+            stock: true,
+            image: "/products/adult-diaper.jpg",
+          },
+          {
+            id: "ad2",
+            name: "Underpads for Bed Protection",
+            price: 499,
+            discount: 8,
+            stock: true,
+            image: "/products/underpads.jpg",
+          },
+        ],
+      },
+      {
+        name: "Baby Diapers",
+        slug: "baby-diapers",
+        products: [
+          {
+            id: "bd1",
+            name: "Baby Diaper Pants Medium",
+            price: 649,
+            discount: 10,
+            stock: true,
+            image: "/products/baby-diaper.jpg",
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "Surgical",
+    slug: "surgical",
+    description: "Sterile surgical consumables, gloves and dressing support for clinics and homes.",
+    image: "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1000&q=80",
+    subcategories: [
+      {
+        name: "Gloves",
+        slug: "gloves",
+        products: [
+          {
+            id: "sg1",
+            name: "Latex Examination Gloves",
+            price: 550,
+            discount: 7,
+            stock: true,
+            image: "/products/gloves.jpg",
+          },
+          {
+            id: "sg2",
+            name: "Nitrile Powder-Free Gloves",
+            price: 690,
+            discount: 9,
+            stock: true,
+            image: "/products/nitrile-gloves.jpg",
+          },
+        ],
+      },
+      {
+        name: "Dressing Products",
+        slug: "dressing",
+        products: [
+          {
+            id: "dp1",
+            name: "Sterile Gauze Swabs",
+            price: 299,
+            discount: 5,
+            stock: true,
+            image: "/products/gauze.jpg",
+          },
+          {
+            id: "dp2",
+            name: "Medical Adhesive Tape",
+            price: 180,
+            discount: 0,
+            stock: true,
+            image: "/products/medical-tape.jpg",
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "Orthopedic",
+    slug: "orthopedic",
+    description: "Knee, back and joint support products for recovery and everyday comfort.",
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1000&q=80",
+    subcategories: [
+      {
+        name: "Knee Support",
+        slug: "knee-support",
+        products: [
+          {
+            id: "ks1",
+            name: "Adjustable Knee Support",
+            price: 899,
+            discount: 10,
+            stock: true,
+            image: "/products/knee-support.jpg",
+          },
+          {
+            id: "ks2",
+            name: "Hinged Knee Brace",
+            price: 1699,
+            discount: 12,
+            stock: true,
+            image: "/products/knee-brace.jpg",
+          },
+        ],
+      },
+      {
+        name: "Back Support",
+        slug: "back-support",
+        products: [
+          {
+            id: "bs1",
+            name: "Lumbar Support Belt",
+            price: 1199,
+            discount: 10,
+            stock: true,
+            image: "/products/back-support.jpg",
+          },
+          {
+            id: "bs2",
+            name: "Posture Corrector Belt",
+            price: 999,
+            discount: 15,
+            stock: true,
+            image: "/products/posture-belt.jpg",
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "Digital Monitoring",
+    slug: "digital-monitoring",
+    description: "BP monitors, oximeters and home devices for daily health checks.",
+    image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1000&q=80",
+    subcategories: [
+      {
+        name: "Blood Pressure Monitor",
+        slug: "bp-monitor",
+        products: [
+          {
+            id: "bp1",
+            name: "Digital BP Monitor",
+            price: 1999,
+            discount: 15,
+            stock: true,
+            image: "/products/bp.jpg",
+          },
+        ],
+      },
+      {
+        name: "Oximeter",
+        slug: "oximeter",
+        products: [
+          {
+            id: "ox1",
+            name: "Pulse Oximeter",
+            price: 999,
+            discount: 20,
+            stock: true,
+            image: "/products/oximeter.jpg",
+          },
+        ],
+      },
+      {
+        name: "Thermometer",
+        slug: "thermometer",
+        products: [
+          {
+            id: "th1",
+            name: "Digital Thermometer",
+            price: 249,
+            discount: 5,
+            stock: true,
+            image: "/products/thermometer.jpg",
+          },
+          {
+            id: "th2",
+            name: "Infrared Forehead Thermometer",
+            price: 1499,
+            discount: 18,
+            stock: true,
+            image: "/products/infrared-thermometer.jpg",
+          },
+        ],
+      },
+    ],
+  },
+] satisfies import("@/types").CommerceCategory[];
+
+export const commerceProductImages: Record<string, string[]> = {
+  wc1: [
+    "https://images.unsplash.com/photo-1576765608866-5b51f659516a?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+  ],
+  wc2: [
+    "https://images.unsplash.com/photo-1579154341098-e4e158cc7f55?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
+  ],
+  bp1: [
+    "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?auto=format&fit=crop&w=1200&q=80",
+  ],
+  ox1: [
+    "https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1200&q=80",
+  ],
+  ad1: [
+    "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+  ],
+  ad2: [
+    "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1200&q=80",
+  ],
+  bd1: [
+    "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1200&q=80",
+  ],
+  sg1: [
+    "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=1200&q=80",
+  ],
+  sg2: [
+    "https://images.unsplash.com/photo-1583912267550-d44c55a3e4eb?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1581093458791-9d15482442f6?auto=format&fit=crop&w=1200&q=80",
+  ],
+  dp1: [
+    "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1580281657527-47f249e8f4df?auto=format&fit=crop&w=1200&q=80",
+  ],
+  dp2: [
+    "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1200&q=80",
+  ],
+  ks1: [
+    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1200&q=80",
+  ],
+  ks2: [
+    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+  ],
+  bs1: [
+    "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
+  ],
+  bs2: [
+    "https://images.unsplash.com/photo-1612277795421-9bc7706a4a34?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1583947581924-a31d48c35b83?auto=format&fit=crop&w=1200&q=80",
+  ],
+  th1: [
+    "https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=1200&q=80",
+  ],
+  th2: [
+    "https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1200&q=80",
+  ],
+};
 
 export const products: Product[] = [
   {

@@ -5,6 +5,29 @@ export type ProductCategory =
   | "Wellness"
   | "Orthocare";
 
+export type CommerceProduct = {
+  id: string;
+  name: string;
+  price: number;
+  discount: number;
+  stock: boolean;
+  image: string;
+};
+
+export type CommerceSubcategory = {
+  name: string;
+  slug: string;
+  products: CommerceProduct[];
+};
+
+export type CommerceCategory = {
+  name: string;
+  slug: string;
+  description: string;
+  image: string;
+  subcategories: CommerceSubcategory[];
+};
+
 export type Product = {
   id: string;
   name: string;
