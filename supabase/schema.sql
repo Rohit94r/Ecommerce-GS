@@ -41,8 +41,8 @@ create table if not exists public.products (
   name text not null,
   slug text not null unique,
   category text not null,
-  price numeric(12, 2) not null check (price >= 0),
-  discount numeric(5, 2) not null default 0 check (discount >= 0 and discount <= 100),
+  price numeric(14, 2) not null check (price >= 0),
+  discount numeric(6, 2) not null default 0 check (discount >= 0 and discount <= 100),
   stock integer not null default 0 check (stock >= 0),
   description text not null default '',
   brand text not null default '',
@@ -70,7 +70,7 @@ create table if not exists public.rentals (
   product_id uuid references public.products(id) on delete set null,
   name text not null,
   slug text not null unique,
-  price_per_day numeric(12, 2) not null check (price_per_day >= 0),
+  price_per_day numeric(14, 2) not null check (price_per_day >= 0),
   availability boolean not null default true,
   description text not null default '',
   image_url text,
@@ -85,7 +85,7 @@ create table if not exists public.orders (
   customer_name text not null,
   phone text not null,
   address text not null,
-  total_price numeric(12, 2) not null default 0 check (total_price >= 0),
+  total_price numeric(14, 2) not null default 0 check (total_price >= 0),
   status public.order_status not null default 'pending',
   notes text not null default '',
   created_at timestamptz not null default now(),
@@ -97,7 +97,7 @@ create table if not exists public.order_items (
   order_id uuid not null references public.orders(id) on delete cascade,
   product_id uuid references public.products(id) on delete set null,
   product_name text not null,
-  unit_price numeric(12, 2) not null check (unit_price >= 0),
+  unit_price numeric(14, 2) not null check (unit_price >= 0),
   quantity integer not null check (quantity > 0),
   created_at timestamptz not null default now()
 );
@@ -145,6 +145,19 @@ alter table public.orders
 alter table public.products
   add column if not exists show_on_homepage boolean not null default false,
   add column if not exists is_special_offer boolean not null default false;
+
+alter table public.products
+  alter column price type numeric(14, 2),
+  alter column discount type numeric(6, 2);
+
+alter table public.rentals
+  alter column price_per_day type numeric(14, 2);
+
+alter table public.orders
+  alter column total_price type numeric(14, 2);
+
+alter table public.order_items
+  alter column unit_price type numeric(14, 2);
 
 alter table public.google_reviews
   add column if not exists reviewer_name text not null default '',

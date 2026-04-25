@@ -28,6 +28,7 @@ type ProductRow = {
   show_on_homepage: boolean | null;
   is_special_offer: boolean | null;
   is_rental: boolean;
+  is_active: boolean | null;
   product_images?: ProductImageRow[];
 };
 type BlogRow = {
@@ -74,7 +75,7 @@ type OrderRow = {
   status: Order["status"];
   order_items?: OrderItemRow[];
 };
-type AdminProduct = Product & { featured?: boolean; showOnHomepage?: boolean; specialOffer?: boolean };
+type AdminProduct = Product & { featured?: boolean; showOnHomepage?: boolean; specialOffer?: boolean; active?: boolean };
 type AdminRental = Rental & { id?: string; name: string; description: string; image: string };
 type DraftProduct = {
   id?: string;
@@ -88,6 +89,7 @@ type DraftProduct = {
   featured?: boolean;
   showOnHomepage?: boolean;
   specialOffer?: boolean;
+  active?: boolean;
 };
 
 const categoryOptions: ProductCategory[] = ["Hospital Equipment", "Mobility Products", "Oxygen on Rent", "Wellness", "Orthocare"];
@@ -184,6 +186,7 @@ function mapProduct(row: ProductRow): AdminProduct {
     featured: row.is_featured,
     showOnHomepage: Boolean(row.show_on_homepage),
     specialOffer: Boolean(row.is_special_offer),
+    active: row.is_active !== false,
   };
 }
 
@@ -436,6 +439,7 @@ export function ProductsAdmin() {
   const [draft, setDraft] = useState<DraftProduct | null>(null);
   const [viewing, setViewing] = useState<AdminProduct | null>(null);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
+  const [actionMenu, setActionMenu] = useState<{ product: AdminProduct; top: number; left: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast, show } = useToast();
 
@@ -466,16 +470,18 @@ export function ProductsAdmin() {
   }, [category, direction, items, query, sort]);
 
   function openAdd() {
-    setDraft({ name: "", category: "Wellness", price: 0, discount: 0, stock: 0, images: [], description: "", featured: false, showOnHomepage: false, specialOffer: false });
+    setDraft({ name: "", category: "Wellness", price: 0, discount: 0, stock: 0, images: [], description: "", featured: false, showOnHomepage: false, specialOffer: false, active: true });
   }
 
   function openEdit(product: AdminProduct) {
-    setDraft({ id: product.id, name: product.name, category: product.category, price: product.price, discount: product.discount, stock: product.stock, images: product.images, description: product.description, featured: product.featured, showOnHomepage: product.showOnHomepage, specialOffer: product.specialOffer });
+    setDraft({ id: product.id, name: product.name, category: product.category, price: product.price, discount: product.discount, stock: product.stock, images: product.images, description: product.description, featured: product.featured, showOnHomepage: product.showOnHomepage, specialOffer: product.specialOffer, active: product.active });
   }
 
   async function saveProduct() {
     if (!draft?.name.trim()) return show("Product name is required", "error");
-    if (draft.price <= 0) return show("Price must be greater than 0", "error");
+    if (!Number.isFinite(draft.price) || draft.price <= 0) return show("Price must be greater than 0", "error");
+    if (draft.price > 999999999999) return show("Price is too high", "error");
+    if (!Number.isFinite(draft.discount) || draft.discount < 0 || draft.discount > 100) return show("Discount must be between 0 and 100", "error");
     if (draft.stock < 0) return show("Stock cannot be negative", "error");
     setLoading(true);
     const slug = slugify(draft.name);
@@ -483,17 +489,17 @@ export function ProductsAdmin() {
       name: draft.name,
       slug,
       category: draft.category,
-      price: draft.price,
-      discount: draft.discount,
+      price: Number(draft.price.toFixed(2)),
+      discount: Number(draft.discount.toFixed(2)),
       stock: draft.stock,
       description: draft.description,
       brand: "Gargi Care",
       features: ["Admin managed product"],
       is_featured: Boolean(draft.featured),
-      show_on_homepage: Boolean(draft.showOnHomepage),
+      show_on_homepage: Boolean(draft.active && draft.showOnHomepage),
       is_special_offer: Boolean(draft.specialOffer),
       is_rental: false,
-      is_active: true,
+      is_active: draft.active !== false,
     };
     const result = draft.id
       ? await supabase.from("products").update(payload).eq("id", draft.id).select("id").single()
@@ -531,14 +537,28 @@ export function ProductsAdmin() {
     }
   }
 
-  async function toggleProductFlag(product: AdminProduct, field: "show_on_homepage" | "is_special_offer") {
-    const currentValue = field === "show_on_homepage" ? Boolean(product.showOnHomepage) : Boolean(product.specialOffer);
-    const { error } = await supabase.from("products").update({ [field]: !currentValue }).eq("id", product.id);
+  async function toggleProductFlag(product: AdminProduct, field: "show_on_homepage" | "is_special_offer" | "is_active") {
+    const currentValue = field === "show_on_homepage" ? Boolean(product.showOnHomepage) : field === "is_special_offer" ? Boolean(product.specialOffer) : product.active !== false;
+    const payload = field === "is_active" && currentValue
+      ? { is_active: false, show_on_homepage: false }
+      : { [field]: !currentValue };
+    const { error } = await supabase.from("products").update(payload).eq("id", product.id);
     if (error) show(cleanError(error), "error");
     else {
-      show(field === "show_on_homepage" ? "Homepage visibility updated" : "Special offer updated");
+      show(field === "show_on_homepage" ? "Homepage visibility updated" : field === "is_special_offer" ? "Special offer updated" : "Inventory availability updated");
+      setActionMenu(null);
       await loadProducts();
     }
+  }
+
+  function openActionMenu(product: AdminProduct, event: React.MouseEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 240;
+    setActionMenu({
+      product,
+      top: rect.bottom + 8,
+      left: Math.max(12, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12)),
+    });
   }
 
   return (
@@ -567,23 +587,21 @@ export function ProductsAdmin() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((product) => (
-                <tr key={product.id} className="hover:bg-slate-50">
+                <tr key={product.id} className={cn("hover:bg-slate-50", product.active === false && "bg-slate-50/70 opacity-75")}>
                   <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="relative h-12 w-12 overflow-hidden rounded-md bg-slate-100"><Image src={product.images[0] ?? defaultImage} alt={product.name} fill className="object-cover" /></div><span className="font-bold text-slate-900">{product.name}</span></div></td>
                   <td className="px-5 py-4">{product.category}</td>
                   <td className="px-5 py-4">{formatCurrency(product.price)}</td>
                   <td className="px-5 py-4"><Badge tone={product.stock > 0 ? "green" : "red"}>{product.stock}</Badge></td>
-                  <td className="px-5 py-4"><div className="flex flex-wrap gap-2">{product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}{product.featured ? <Badge tone="amber">Featured</Badge> : null}{product.showOnHomepage ? <Badge tone="green">Homepage</Badge> : null}{product.specialOffer ? <Badge tone="green">Special Offer</Badge> : null}</div></td>
+                  <td className="px-5 py-4"><div className="flex flex-wrap gap-2">{product.active === false ? <Badge tone="red">Unavailable</Badge> : null}{product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}{product.featured ? <Badge tone="amber">Featured</Badge> : null}{product.showOnHomepage ? <Badge tone="green">Homepage</Badge> : null}{product.specialOffer ? <Badge tone="green">Special Offer</Badge> : null}</div></td>
                   <td className="px-5 py-4">
-                    <details className="relative">
-                      <summary className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-600 shadow-sm transition hover:bg-slate-50">⋯</summary>
-                      <div className="absolute right-0 z-20 mt-2 grid w-56 gap-1 rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
-                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => setViewing(product)}>View</button>
-                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => openEdit(product)}>Edit</button>
-                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(product, "show_on_homepage")}>{product.showOnHomepage ? "Hide from Homepage" : "Show on Homepage"}</button>
-                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(product, "is_special_offer")}>{product.specialOffer ? "Unmark Special Offer" : "Mark Special Offer"}</button>
-                        <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50" onClick={() => setDeleting(product)}>Delete</button>
-                      </div>
-                    </details>
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-600 shadow-sm transition hover:bg-slate-50"
+                      onClick={(event) => openActionMenu(product, event)}
+                      aria-label={`Open actions for ${product.name}`}
+                    >
+                      ⋯
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -596,10 +614,11 @@ export function ProductsAdmin() {
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
             <label className="text-sm font-bold text-slate-700">Category<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value as ProductCategory })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{categoryOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
-            <label className="text-sm font-bold text-slate-700">Price<Input type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
-            <label className="text-sm font-bold text-slate-700">Discount<Input type="number" value={draft.discount} onChange={(event) => setDraft({ ...draft, discount: Number(event.target.value) })} /></label>
-            <label className="text-sm font-bold text-slate-700">Stock<Input type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
-            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:col-span-2 md:grid-cols-3">
+            <label className="text-sm font-bold text-slate-700">Price<Input type="number" min={1} step={0.01} value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
+            <label className="text-sm font-bold text-slate-700">Discount<Input type="number" min={0} max={100} step={0.01} value={draft.discount} onChange={(event) => setDraft({ ...draft, discount: Number(event.target.value) })} /></label>
+            <label className="text-sm font-bold text-slate-700">Stock<Input type="number" min={0} step={1} value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:col-span-2 md:grid-cols-4">
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.active !== false} onChange={(event) => setDraft({ ...draft, active: event.target.checked, showOnHomepage: event.target.checked ? draft.showOnHomepage : false })} /> Available in inventory</label>
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.showOnHomepage)} onChange={(event) => setDraft({ ...draft, showOnHomepage: event.target.checked })} /> Show on Homepage</label>
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.specialOffer)} onChange={(event) => setDraft({ ...draft, specialOffer: event.target.checked })} /> Special Offer</label>
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.featured)} onChange={(event) => setDraft({ ...draft, featured: event.target.checked })} /> Featured</label>
@@ -613,6 +632,22 @@ export function ProductsAdmin() {
       </Modal>
       <Modal open={Boolean(viewing)} title="Product Details" onClose={() => setViewing(null)}>{viewing ? <div className="space-y-3 text-sm text-slate-700"><p><b>Name:</b> {viewing.name}</p><p><b>Category:</b> {viewing.category}</p><p><b>Description:</b> {viewing.description}</p><p><b>Price:</b> {formatCurrency(viewing.price)}</p></div> : null}</Modal>
       <ConfirmModal open={Boolean(deleting)} title="Delete product?" message={`Delete ${deleting?.name ?? "this product"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteProduct} />
+      {actionMenu ? (
+        <>
+          <button className="fixed inset-0 z-[75] cursor-default" aria-label="Close product actions" onClick={() => setActionMenu(null)} />
+          <div
+            className="fixed z-[80] grid w-60 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/15"
+            style={{ top: actionMenu.top, left: actionMenu.left }}
+          >
+            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => { setViewing(actionMenu.product); setActionMenu(null); }}>View</button>
+            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => { openEdit(actionMenu.product); setActionMenu(null); }}>Edit</button>
+            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(actionMenu.product, "is_active")}>{actionMenu.product.active === false ? "Mark Available" : "Mark Unavailable"}</button>
+            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={actionMenu.product.active === false} onClick={() => toggleProductFlag(actionMenu.product, "show_on_homepage")}>{actionMenu.product.showOnHomepage ? "Hide from Homepage" : "Show on Homepage"}</button>
+            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(actionMenu.product, "is_special_offer")}>{actionMenu.product.specialOffer ? "Unmark Special Offer" : "Mark Special Offer"}</button>
+            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50" onClick={() => { setDeleting(actionMenu.product); setActionMenu(null); }}>Delete</button>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

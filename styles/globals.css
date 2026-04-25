@@ -43,6 +43,17 @@ textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 .medical-band {
   background:
     linear-gradient(135deg, rgba(4, 112, 104, 0.13), rgba(255, 255, 255, 0.9) 58%),

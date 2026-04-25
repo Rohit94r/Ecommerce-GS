@@ -26,7 +26,7 @@ export const categories = [
     name: "Mobility",
     slug: "mobility",
     description: "Wheelchairs, walkers and daily movement support for safer home recovery.",
-    image: "/media/product-mobility.svg",
+    image: "/media/mobility.png",
     subcategories: [
       {
         name: "Wheelchairs",
@@ -62,7 +62,7 @@ export const categories = [
     name: "Personal Hygiene",
     slug: "personal-hygiene",
     description: "Reliable hygiene essentials for adults, babies and everyday care routines.",
-    image: "/media/product-hygiene.svg",
+    image: "/media/Personal-hygiene.png",
     subcategories: [
       {
         name: "Adult Diapers",
@@ -107,7 +107,7 @@ export const categories = [
     name: "Surgical",
     slug: "surgical",
     description: "Sterile surgical consumables, gloves and dressing support for clinics and homes.",
-    image: "/media/product-surgical.svg",
+    image: "/media/Surgical.png",
     subcategories: [
       {
         name: "Gloves",
@@ -160,7 +160,7 @@ export const categories = [
     name: "Orthopedic",
     slug: "orthopedic",
     description: "Knee, back and joint support products for recovery and everyday comfort.",
-    image: "/media/product-orthopedic.png",
+    image: "/media/orthopedic.png",
     subcategories: [
       {
         name: "Knee Support",
@@ -213,7 +213,7 @@ export const categories = [
     name: "Digital Monitoring",
     slug: "digital-monitoring",
     description: "BP monitors, oximeters and home devices for daily health checks.",
-    image: "/media/product-monitoring.svg",
+    image: "/media/Home-banner3.png",
     subcategories: [
       {
         name: "Blood Pressure Monitor",
