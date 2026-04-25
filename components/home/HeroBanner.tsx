@@ -3,13 +3,18 @@ import { LinkButton } from "@/components/ui/Button";
 
 const heroBanners = [
   {
-    src: "/media/Home-banner.jpeg",
-    alt: "Medical equipment banner with hospital and home-care products",
+    src: "/media/Home-banner1.jpeg",
+    alt: "Gargi Surgical and Healthcare home banner",
     position: "center",
   },
   {
-    src: "/media/Mobility-Products.png",
-    alt: "Mobility products banner with wheelchair and home-care equipment",
+    src: "/media/Home-banner2.png",
+    alt: "Medical equipment product banner",
+    position: "center",
+  },
+  {
+    src: "/media/Home-banner3.png",
+    alt: "Healthcare products and support banner",
     position: "center",
   },
 ];
@@ -20,9 +25,9 @@ export function HeroBanner() {
   return (
     <section className="overflow-hidden bg-white">
       <div className="relative w-full overflow-hidden bg-white">
-        <div className="hero-banner-track flex h-full w-[300%]">
+        <div className="hero-banner-track flex h-full w-[400%]">
           {sliderBanners.map((banner, index) => (
-            <div key={`${banner.src}-${index}`} className="relative aspect-[16/7] min-h-[260px] w-1/3 shrink-0 bg-white sm:min-h-[360px] lg:min-h-[520px]">
+            <div key={`${banner.src}-${index}`} className="relative aspect-[16/7] min-h-[260px] w-1/4 shrink-0 bg-white sm:min-h-[360px] lg:min-h-[520px]">
               <Image
                 src={banner.src}
                 alt={banner.alt}
@@ -39,7 +44,7 @@ export function HeroBanner() {
           {heroBanners.map((banner, index) => (
             <span
               key={`${banner.src}-dot`}
-              className={`h-2.5 w-2.5 rounded-full bg-white shadow-md shadow-slate-950/20 ${index === 0 ? "hero-banner-dot-one" : "hero-banner-dot-two"}`}
+              className={`h-2.5 w-2.5 rounded-full bg-white shadow-md shadow-slate-950/20 ${index === 0 ? "hero-banner-dot-one" : index === 1 ? "hero-banner-dot-two" : "hero-banner-dot-three"}`}
             />
           ))}
         </div>

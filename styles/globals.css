@@ -58,15 +58,19 @@ textarea {
 }
 
 .hero-banner-track {
-  animation: hero-banner-slide 8s ease-in-out infinite;
+  animation: hero-banner-slide 15s ease-in-out infinite;
 }
 
 .hero-banner-dot-one {
-  animation: hero-banner-dot-one 8s ease-in-out infinite;
+  animation: hero-banner-dot-one 15s ease-in-out infinite;
 }
 
 .hero-banner-dot-two {
-  animation: hero-banner-dot-two 8s ease-in-out infinite;
+  animation: hero-banner-dot-two 15s ease-in-out infinite;
+}
+
+.hero-banner-dot-three {
+  animation: hero-banner-dot-three 15s ease-in-out infinite;
 }
 
 .review-marquee-track {
@@ -75,6 +79,15 @@ textarea {
 
 .review-marquee-track:hover {
   animation-play-state: paused;
+}
+
+.category-carousel {
+  scroll-padding-inline: 1rem;
+  scrollbar-width: none;
+}
+
+.category-carousel::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes rise-in {
@@ -91,35 +104,40 @@ textarea {
 
 @keyframes hero-banner-slide {
   0%,
-  36% {
+  25% {
     transform: translateX(0);
   }
 
-  46%,
-  82% {
-    transform: translateX(-33.333333%);
+  33%,
+  58% {
+    transform: translateX(-25%);
   }
 
-  92%,
+  66%,
+  91% {
+    transform: translateX(-50%);
+  }
+
+  98%,
   100% {
-    transform: translateX(-66.666667%);
+    transform: translateX(-75%);
   }
 }
 
 @keyframes hero-banner-dot-one {
   0%,
-  36% {
+  25% {
     opacity: 1;
     transform: scale(1.25);
   }
 
-  46%,
-  82% {
+  33%,
+  91% {
     opacity: 0.55;
     transform: scale(1);
   }
 
-  92%,
+  98%,
   100% {
     opacity: 1;
     transform: scale(1.25);
@@ -128,18 +146,38 @@ textarea {
 
 @keyframes hero-banner-dot-two {
   0%,
-  36% {
+  25% {
     opacity: 0.55;
     transform: scale(1);
   }
 
-  46%,
-  82% {
+  33%,
+  58% {
     opacity: 1;
     transform: scale(1.25);
   }
 
-  92%,
+  66%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+}
+
+@keyframes hero-banner-dot-three {
+  0%,
+  58% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  66%,
+  91% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+
+  98%,
   100% {
     opacity: 0.55;
     transform: scale(1);
@@ -171,7 +209,8 @@ textarea {
   }
 
   .hero-banner-dot-one,
-  .hero-banner-dot-two {
+  .hero-banner-dot-two,
+  .hero-banner-dot-three {
     animation: none;
   }
 

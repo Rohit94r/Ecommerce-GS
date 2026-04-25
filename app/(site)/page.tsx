@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CategoryCarousel } from "@/components/home/CategoryCarousel";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SiteShell } from "@/components/layout/SiteShell";
@@ -37,15 +37,8 @@ export default async function Home() {
 
       <section className="section-separator bg-white px-4 py-[4.5rem] sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <SectionHeader title="Shop by healthcare need" description="Find the right support faster, whether you are setting up recovery at home or buying for a clinic." />
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-            {categories.map((category) => (
-              <Link key={category.name} href={`/products/${category.slug}`} className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:border-[#047068]/25 hover:shadow-xl hover:shadow-[#047068]/10">
-                <h3 className="text-[15px] font-black text-slate-950">{category.name}</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{category.description}</p>
-              </Link>
-            ))}
-          </div>
+          <SectionHeader eyebrow="Product Categories" title="Shop by healthcare need" description="Find the right support faster, whether you are setting up recovery at home or buying for a clinic." />
+          <CategoryCarousel categories={categories} />
         </div>
       </section>
 
