@@ -92,6 +92,14 @@ input[type="number"]::-webkit-inner-spin-button {
   animation-play-state: paused;
 }
 
+.brand-logo-track {
+  animation: brand-logo-scroll 32s linear infinite;
+}
+
+.brand-logo-track:hover {
+  animation-play-state: paused;
+}
+
 .home-products-track {
   scroll-snap-type: x proximity;
   scrollbar-width: none;
@@ -222,6 +230,16 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+@keyframes brand-logo-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
 @keyframes home-products-scroll {
   from {
     transform: translateX(0);
@@ -253,6 +271,10 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 
   .review-marquee-track {
+    animation: none;
+  }
+
+  .brand-logo-track {
     animation: none;
   }
 

@@ -1,3 +1,4 @@
+import { BrandLogoScroller } from "@/components/home/BrandLogoScroller";
 import { CategoryCarousel } from "@/components/home/CategoryCarousel";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { HomeProductScroller } from "@/components/home/HomeProductScroller";
@@ -5,7 +6,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { getFeaturedGoogleReviews } from "@/lib/googleReviews";
 import { getHomepageProducts } from "@/lib/homeProducts";
-import { categories, partnerBrands } from "@/lib/dummyData";
+import { categories } from "@/lib/dummyData";
 
 export default async function Home() {
   const homepageProducts = await getHomepageProducts();
@@ -35,6 +36,8 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      <BrandLogoScroller />
 
       <section className="section-separator bg-white px-4 py-[4.5rem] sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
@@ -78,14 +81,6 @@ export default async function Home() {
                 ))}
               </div>
             )}
-          </div>
-          <div className="mt-14 rounded-2xl border border-slate-200 bg-slate-50/80 p-6 shadow-inner shadow-white">
-            <p className="text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500">Partner brands</p>
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
-              {partnerBrands.map((brand) => (
-                <span key={brand} className="rounded-lg bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm shadow-slate-900/5">{brand}</span>
-              ))}
-            </div>
           </div>
         </div>
       </section>
