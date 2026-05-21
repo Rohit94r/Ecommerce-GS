@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { categories as defaultCategories } from "@/lib/dummyData";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
@@ -48,6 +49,10 @@ type ProductRow = {
 };
 
 const defaultProductImage = "/media/Home-banner2.png";
+const catalogCache = {
+  revalidate: 30,
+  tags: ["catalog"],
+};
 
 function cloneDefaultCategories(): CommerceCategory[] {
   return defaultCategories.map((category) => ({
@@ -124,7 +129,7 @@ function findOrCreateSubcategory(category: CommerceCategory, name: string, slug 
   return subcategory;
 }
 
-export async function getCatalogCategories(): Promise<CommerceCategory[]> {
+async function fetchCatalogCategories(): Promise<CommerceCategory[]> {
   const catalog = cloneDefaultCategories();
   const categoryBySlug = new Map(catalog.map((category) => [category.slug, category]));
   const subcategoryById = new Map<string, { category: CommerceCategory; subcategory: CommerceSubcategory }>();
@@ -196,7 +201,7 @@ export async function getCatalogCategories(): Promise<CommerceCategory[]> {
   }
 }
 
-export async function getCatalogCategory(slug: string) {
+async function fetchCatalogCategory(slug: string) {
   const fallback = getDefaultCategory(slug);
 
   try {
@@ -269,7 +274,7 @@ export async function getCatalogCategory(slug: string) {
   }
 }
 
-export async function getCatalogSubcategory(categorySlug: string, subcategorySlug: string) {
+async function fetchCatalogSubcategory(categorySlug: string, subcategorySlug: string) {
   const fallbackCategory = getDefaultCategory(categorySlug);
 
   try {
@@ -316,7 +321,7 @@ export async function getCatalogSubcategory(categorySlug: string, subcategorySlu
   }
 }
 
-export async function getCatalogProduct(categorySlug: string, subcategorySlug: string, id: string) {
+async function fetchCatalogProduct(categorySlug: string, subcategorySlug: string, id: string) {
   try {
     const supabase = createPublicClient();
     const { data: categoryData, error: categoryError } = await supabase
@@ -384,3 +389,8 @@ function toProductMedia(rows: ProductImageRow[], productId: string): ProductMedi
     }))
     .sort((a, b) => Number(a.type === "video") - Number(b.type === "video"));
 }
+
+export const getCatalogCategories = unstable_cache(fetchCatalogCategories, ["catalog-categories"], catalogCache);
+export const getCatalogCategory = unstable_cache(fetchCatalogCategory, ["catalog-category"], catalogCache);
+export const getCatalogSubcategory = unstable_cache(fetchCatalogSubcategory, ["catalog-subcategory"], catalogCache);
+export const getCatalogProduct = unstable_cache(fetchCatalogProduct, ["catalog-product"], catalogCache);

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
 import type { Product, ProductCategory, Rental } from "@/types";
 import { createPublicClient } from "@/utils/supabase/public";
@@ -30,6 +31,10 @@ type ProductJoin = {
 };
 
 const defaultImage = "/media/Home-banner2.png";
+const rentalsCache = {
+  revalidate: 30,
+  tags: ["rentals", "catalog"],
+};
 
 function mapRental(row: RentalRow): { product: Product; rental: Rental } {
   const productRow = Array.isArray(row.products) ? row.products[0] : row.products;
@@ -68,7 +73,7 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
   };
 }
 
-export async function getActiveRentals() {
+async function fetchActiveRentals() {
   try {
     const supabase = createPublicClient();
     const { data, error } = await supabase
@@ -84,7 +89,10 @@ export async function getActiveRentals() {
   }
 }
 
-export async function getActiveRental(id: string) {
+async function fetchActiveRental(id: string) {
   const rentals = await getActiveRentals();
   return rentals.find((item) => item.product.id === id || item.rental.product_id === id) ?? null;
 }
+
+export const getActiveRentals = unstable_cache(fetchActiveRentals, ["active-rentals"], rentalsCache);
+export const getActiveRental = unstable_cache(fetchActiveRental, ["active-rental"], rentalsCache);

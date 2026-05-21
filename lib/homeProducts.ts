@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
 import type { Product, ProductCategory, ProductMedia } from "@/types";
@@ -29,6 +30,10 @@ type HomeProductRow = {
 };
 
 const defaultImage = "/media/Home-banner2.png";
+const homepageProductsCache = {
+  revalidate: 30,
+  tags: ["catalog", "homepage-products"],
+};
 
 function toProduct(row: HomeProductRow): Product {
   const media = toProductMedia(row.product_images ?? [], row.id);
@@ -59,7 +64,7 @@ function toProduct(row: HomeProductRow): Product {
   };
 }
 
-export async function getHomepageProducts() {
+async function fetchHomepageProducts() {
   try {
     const supabase = createPublicClient();
     const { data, error } = await supabase
@@ -79,6 +84,8 @@ export async function getHomepageProducts() {
     return [];
   }
 }
+
+export const getHomepageProducts = unstable_cache(fetchHomepageProducts, ["homepage-products"], homepageProductsCache);
 
 function toProductMedia(rows: NonNullable<HomeProductRow["product_images"]>, productId: string): ProductMedia[] {
   return rows

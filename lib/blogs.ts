@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { blogMediaRoute, isDataUrl } from "@/lib/media";
 import type { Blog } from "@/types";
 import { createPublicClient } from "@/utils/supabase/public";
@@ -19,6 +20,10 @@ type BlogImageRow = {
 };
 
 const defaultImage = "/media/Home-banner2.png";
+const blogsCache = {
+  revalidate: 60,
+  tags: ["blogs"],
+};
 
 function mapBlog(row: BlogRow): Blog {
   const images = (row.blog_images ?? [])
@@ -76,7 +81,7 @@ async function selectPublishedBlog(slug: string) {
     .maybeSingle();
 }
 
-export async function getPublishedBlogs() {
+async function fetchPublishedBlogs() {
   try {
     const { data, error } = await selectPublishedBlogs();
 
@@ -87,7 +92,7 @@ export async function getPublishedBlogs() {
   }
 }
 
-export async function getPublishedBlog(slug: string) {
+async function fetchPublishedBlog(slug: string) {
   try {
     const { data, error } = await selectPublishedBlog(slug);
 
@@ -97,3 +102,6 @@ export async function getPublishedBlog(slug: string) {
     return null;
   }
 }
+
+export const getPublishedBlogs = unstable_cache(fetchPublishedBlogs, ["published-blogs"], blogsCache);
+export const getPublishedBlog = unstable_cache(fetchPublishedBlog, ["published-blog"], blogsCache);

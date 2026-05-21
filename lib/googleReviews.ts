@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import type { GoogleReview } from "@/types";
 import { createPublicClient } from "@/utils/supabase/public";
 
@@ -25,7 +26,12 @@ function mapReview(row: GoogleReviewRow): GoogleReview {
   };
 }
 
-export async function getFeaturedGoogleReviews() {
+const reviewsCache = {
+  revalidate: 60,
+  tags: ["google-reviews"],
+};
+
+async function fetchFeaturedGoogleReviews() {
   try {
     const supabase = createPublicClient();
     const { data, error } = await supabase
@@ -42,3 +48,5 @@ export async function getFeaturedGoogleReviews() {
     return [];
   }
 }
+
+export const getFeaturedGoogleReviews = unstable_cache(fetchFeaturedGoogleReviews, ["featured-google-reviews"], reviewsCache);
