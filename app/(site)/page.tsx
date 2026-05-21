@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { BrandLogoScroller } from "@/components/home/BrandLogoScroller";
 import { CategoryCarousel } from "@/components/home/CategoryCarousel";
 import { HeroBanner } from "@/components/home/HeroBanner";
@@ -5,10 +6,12 @@ import { HomeProductScroller } from "@/components/home/HomeProductScroller";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { getFeaturedGoogleReviews } from "@/lib/googleReviews";
+import { getCatalogCategories } from "@/lib/catalog/data";
 import { getHomepageProducts } from "@/lib/homeProducts";
-import { categories } from "@/lib/dummyData";
 
 export default async function Home() {
+  await connection();
+  const categories = await getCatalogCategories();
   const homepageProducts = await getHomepageProducts();
   const googleReviews = await getFeaturedGoogleReviews();
   const scrollingReviews = googleReviews.length > 3 ? [...googleReviews, ...googleReviews] : googleReviews;

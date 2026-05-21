@@ -144,7 +144,8 @@ alter table public.orders
 
 alter table public.products
   add column if not exists show_on_homepage boolean not null default false,
-  add column if not exists is_special_offer boolean not null default false;
+  add column if not exists is_special_offer boolean not null default false,
+  add column if not exists subcategory_id uuid references public.subcategories(id) on delete set null;
 
 alter table public.products
   alter column price type numeric(14, 2),
@@ -182,6 +183,45 @@ create index if not exists idx_order_items_order_id on public.order_items(order_
 create index if not exists idx_blogs_slug on public.blogs(slug);
 create index if not exists idx_profiles_email on public.profiles(email);
 create index if not exists idx_google_reviews_featured on public.google_reviews(is_featured);
+
+insert into public.categories (name, slug, description, image_url, sort_order, is_active)
+values
+  ('Mobility', 'mobility', 'Wheelchairs, walkers and daily movement support for safer home recovery.', '/media/mobility.png', 0, true),
+  ('Personal Hygiene', 'personal-hygiene', 'Reliable hygiene essentials for adults, babies and everyday care routines.', '/media/Personal-hygiene.png', 1, true),
+  ('Surgical', 'surgical', 'Sterile surgical consumables, gloves and dressing support for clinics and homes.', '/media/Surgical.png', 2, true),
+  ('Orthopedic', 'orthopedic', 'Knee, back and joint support products for recovery and everyday comfort.', '/media/orthopedic.png', 3, true),
+  ('Digital Monitoring', 'digital-monitoring', 'BP monitors, oximeters and home devices for daily health checks.', '/media/digital-monitoring.png', 4, true)
+on conflict (slug) do update
+  set name = excluded.name,
+      description = excluded.description,
+      image_url = excluded.image_url,
+      sort_order = excluded.sort_order,
+      is_active = true,
+      updated_at = now();
+
+with seed_subcategories(category_slug, name, slug, sort_order) as (
+  values
+    ('mobility', 'Wheelchairs', 'wheelchairs', 0),
+    ('mobility', 'Walkers', 'walkers', 1),
+    ('personal-hygiene', 'Adult Diapers', 'adult-diapers', 0),
+    ('personal-hygiene', 'Baby Diapers', 'baby-diapers', 1),
+    ('surgical', 'Gloves', 'gloves', 0),
+    ('surgical', 'Dressing Products', 'dressing', 1),
+    ('orthopedic', 'Knee Support', 'knee-support', 0),
+    ('orthopedic', 'Back Support', 'back-support', 1),
+    ('digital-monitoring', 'Blood Pressure Monitor', 'bp-monitor', 0),
+    ('digital-monitoring', 'Oximeter', 'oximeter', 1),
+    ('digital-monitoring', 'Thermometer', 'thermometer', 2)
+)
+insert into public.subcategories (category_id, name, slug, description, sort_order, is_active)
+select categories.id, seed_subcategories.name, seed_subcategories.slug, '', seed_subcategories.sort_order, true
+from seed_subcategories
+join public.categories on categories.slug = seed_subcategories.category_slug
+on conflict (category_id, slug) do update
+  set name = excluded.name,
+      sort_order = excluded.sort_order,
+      is_active = true,
+      updated_at = now();
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -240,15 +280,17 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, name, email)
+  insert into public.profiles (id, name, email, phone)
   values (
     new.id,
     coalesce(new.raw_user_meta_data ->> 'name', new.raw_user_meta_data ->> 'full_name', ''),
-    coalesce(new.email, '')
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data ->> 'phone', '')
   )
   on conflict (id) do update
     set name = excluded.name,
         email = excluded.email,
+        phone = excluded.phone,
         updated_at = now();
 
   return new;

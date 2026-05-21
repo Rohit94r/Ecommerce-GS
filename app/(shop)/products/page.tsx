@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { CategoryCard } from "@/components/product/catalog/CategoryCard";
 import { ProductSearchPanel } from "@/components/product/catalog/ProductSearchPanel";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { categories } from "@/lib/dummyData";
+import { getCatalogCategories } from "@/lib/catalog/data";
 
 export const metadata: Metadata = {
   title: "Products",
   description: "Browse medical products by category, subcategory and product from Gargi Surgical & Healthcare.",
 };
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  await connection();
+  const categories = await getCatalogCategories();
+
   return (
     <SiteShell>
       <section className="bg-white">

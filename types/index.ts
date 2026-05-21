@@ -1,9 +1,9 @@
 export type ProductCategory =
-  | "Hospital Equipment"
-  | "Mobility Products"
-  | "Oxygen on Rent"
-  | "Wellness"
-  | "Orthocare";
+  | "Mobility"
+  | "Personal Hygiene"
+  | "Surgical"
+  | "Digital Monitoring"
+  | "Orthopedic";
 
 export type CommerceProduct = {
   id: string;
@@ -12,6 +12,10 @@ export type CommerceProduct = {
   discount: number;
   stock: boolean;
   image: string;
+  images?: string[];
+  description?: string;
+  features?: string[];
+  brand?: string;
 };
 
 export type CommerceSubcategory = {

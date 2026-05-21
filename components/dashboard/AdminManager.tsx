@@ -8,13 +8,21 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/utils/supabase/client";
 import { cn, formatCurrency, slugify } from "@/lib/utils";
+import { categories as catalogCategories } from "@/lib/dummyData";
 import type { Blog, GoogleReview, Order, Product, ProductCategory, Rental } from "@/types";
 
 type Toast = { message: string; tone: "success" | "error" };
 type SortDirection = "asc" | "desc";
 type ProductImageRow = { image_url: string; sort_order: number | null };
+type ProductSubcategoryRow = {
+  id: string;
+  name: string;
+  slug: string;
+  category_id: string;
+};
 type ProductRow = {
   id: string;
+  subcategory_id: string | null;
   name: string;
   slug: string;
   category: ProductCategory;
@@ -29,7 +37,39 @@ type ProductRow = {
   is_special_offer: boolean | null;
   is_rental: boolean;
   is_active: boolean | null;
+  subcategories?: ProductSubcategoryRow | ProductSubcategoryRow[] | null;
   product_images?: ProductImageRow[];
+};
+type SubcategoryOption = {
+  id?: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+};
+type CategoryOption = {
+  id?: string;
+  name: ProductCategory;
+  slug: string;
+  description: string;
+  image: string;
+  sortOrder: number;
+  subcategories: SubcategoryOption[];
+};
+type CategoryRow = {
+  id: string;
+  name: ProductCategory;
+  slug: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
+  subcategories?: {
+    id: string;
+    name: string;
+    slug: string;
+    sort_order: number | null;
+    is_active: boolean | null;
+  }[] | null;
 };
 type BlogRow = {
   id: string;
@@ -75,12 +115,16 @@ type OrderRow = {
   status: Order["status"];
   order_items?: OrderItemRow[];
 };
-type AdminProduct = Product & { featured?: boolean; showOnHomepage?: boolean; specialOffer?: boolean; active?: boolean };
+type AdminProduct = Product & { featured?: boolean; showOnHomepage?: boolean; specialOffer?: boolean; active?: boolean; subcategoryId?: string | null; subcategoryName?: string | null; subcategorySlug?: string | null };
 type AdminRental = Rental & { id?: string; name: string; description: string; image: string };
 type DraftProduct = {
   id?: string;
   name: string;
   category: ProductCategory;
+  categorySlug: string;
+  subcategoryId: string;
+  subcategoryMode: "existing" | "new";
+  newSubcategoryName: string;
   price: number;
   discount: number;
   stock: number;
@@ -92,7 +136,18 @@ type DraftProduct = {
   active?: boolean;
 };
 
-const categoryOptions: ProductCategory[] = ["Hospital Equipment", "Mobility Products", "Oxygen on Rent", "Wellness", "Orthocare"];
+const defaultCategoryOptions: CategoryOption[] = catalogCategories.map((category, index) => ({
+  name: category.name as ProductCategory,
+  slug: category.slug,
+  description: category.description,
+  image: category.image,
+  sortOrder: index,
+  subcategories: category.subcategories.map((subcategory, subcategoryIndex) => ({
+    name: subcategory.name,
+    slug: subcategory.slug,
+    sortOrder: subcategoryIndex,
+  })),
+}));
 const defaultImage = "/media/hero-care.svg";
 const supabase = createClient();
 
@@ -170,6 +225,7 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm }: { open: boo
 
 function mapProduct(row: ProductRow): AdminProduct {
   const images = row.product_images?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((image) => image.image_url) ?? [];
+  const subcategory = Array.isArray(row.subcategories) ? row.subcategories[0] : row.subcategories;
 
   return {
     id: row.id,
@@ -187,6 +243,9 @@ function mapProduct(row: ProductRow): AdminProduct {
     showOnHomepage: Boolean(row.show_on_homepage),
     specialOffer: Boolean(row.is_special_offer),
     active: row.is_active !== false,
+    subcategoryId: row.subcategory_id ?? subcategory?.id ?? null,
+    subcategoryName: subcategory?.name ?? null,
+    subcategorySlug: subcategory?.slug ?? null,
   };
 }
 
@@ -208,7 +267,7 @@ function mapOrder(row: OrderRow): Order {
       id: item.product_id ?? item.product_name,
       name: item.product_name,
       price: Number(item.unit_price),
-      category: "Wellness" as ProductCategory,
+      category: "Mobility" as ProductCategory,
       images: [defaultImage],
       stock: 1,
       discount: 0,
@@ -254,6 +313,82 @@ function mapGoogleReview(row: GoogleReviewRow): GoogleReview {
     is_featured: Boolean(row.is_featured),
     created_at: row.created_at.slice(0, 10),
   };
+}
+
+function toCategoryOptions(rows: CategoryRow[]): CategoryOption[] {
+  const rowOptions = rows
+    .filter((row) => row.is_active !== false)
+    .map((row, index) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      description: row.description ?? "",
+      image: row.image_url ?? defaultImage,
+      sortOrder: row.sort_order ?? index,
+      subcategories: (row.subcategories ?? [])
+        .filter((subcategory) => subcategory.is_active !== false)
+        .map((subcategory, subcategoryIndex) => ({
+          id: subcategory.id,
+          name: subcategory.name,
+          slug: subcategory.slug,
+          sortOrder: subcategory.sort_order ?? subcategoryIndex,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return defaultCategoryOptions.map((defaultCategory) => {
+    const rowCategory = rowOptions.find((item) => item.slug === defaultCategory.slug);
+    if (!rowCategory) return defaultCategory;
+
+    const subcategories = [...defaultCategory.subcategories];
+    rowCategory.subcategories.forEach((subcategory) => {
+      const existingIndex = subcategories.findIndex((item) => item.slug === subcategory.slug);
+      if (existingIndex >= 0) subcategories[existingIndex] = { ...subcategories[existingIndex], ...subcategory };
+      else subcategories.push(subcategory);
+    });
+
+    return { ...defaultCategory, ...rowCategory, subcategories };
+  });
+}
+
+async function ensureDefaultCatalog() {
+  const { data: categoryRows, error: categoryError } = await supabase
+    .from("categories")
+    .upsert(
+      defaultCategoryOptions.map((category) => ({
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+        image_url: category.image,
+        sort_order: category.sortOrder,
+        is_active: true,
+      })),
+      { onConflict: "slug" },
+    )
+    .select("id, slug");
+
+  if (categoryError) throw categoryError;
+
+  const categoryIds = new Map((categoryRows ?? []).map((category) => [String(category.slug), String(category.id)]));
+  const subcategoryRows = defaultCategoryOptions.flatMap((category) => {
+    const categoryId = categoryIds.get(category.slug);
+    if (!categoryId) return [];
+
+    return category.subcategories.map((subcategory) => ({
+      category_id: categoryId,
+      name: subcategory.name,
+      slug: subcategory.slug,
+      description: "",
+      sort_order: subcategory.sortOrder,
+      is_active: true,
+    }));
+  });
+
+  if (subcategoryRows.length) {
+    const { error } = await supabase.from("subcategories").upsert(subcategoryRows, { onConflict: "category_id,slug" });
+    if (error) throw error;
+  }
 }
 
 export function OverviewAdmin() {
@@ -432,6 +567,7 @@ export function OverviewAdmin() {
 
 export function ProductsAdmin() {
   const [items, setItems] = useState<AdminProduct[]>([]);
+  const [catalogOptions, setCatalogOptions] = useState<CategoryOption[]>(defaultCategoryOptions);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<keyof Pick<Product, "name" | "price" | "stock" | "discount">>("name");
@@ -443,9 +579,25 @@ export function ProductsAdmin() {
   const [loading, setLoading] = useState(false);
   const { toast, show } = useToast();
 
+  const loadCategoryOptions = useCallback(async () => {
+    try {
+      await ensureDefaultCatalog();
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name, slug, description, image_url, sort_order, is_active, subcategories(id, name, slug, sort_order, is_active)")
+        .eq("is_active", true);
+
+      if (error) throw error;
+      setCatalogOptions(toCategoryOptions((data ?? []) as CategoryRow[]));
+    } catch (error) {
+      setCatalogOptions(defaultCategoryOptions);
+      show(cleanError(error), "error");
+    }
+  }, [show]);
+
   const loadProducts = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("products").select("*, product_images(image_url, sort_order)").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("products").select("*, subcategories(id, name, slug, category_id), product_images(image_url, sort_order)").order("created_at", { ascending: false });
     if (error) show(cleanError(error), "error");
     else setItems(((data ?? []) as ProductRow[]).map(mapProduct));
     setLoading(false);
@@ -453,10 +605,11 @@ export function ProductsAdmin() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      void loadCategoryOptions();
       void loadProducts();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [loadProducts]);
+  }, [loadCategoryOptions, loadProducts]);
 
   const filtered = useMemo(() => {
     return items
@@ -469,12 +622,109 @@ export function ProductsAdmin() {
       });
   }, [category, direction, items, query, sort]);
 
+  function firstSubcategoryFor(categoryOption: CategoryOption) {
+    return categoryOption.subcategories.find((subcategory) => subcategory.id) ?? categoryOption.subcategories[0];
+  }
+
+  function setDraftCategory(categorySlug: string) {
+    if (!draft) return;
+    const nextCategory = catalogOptions.find((option) => option.slug === categorySlug) ?? catalogOptions[0];
+    const nextSubcategory = firstSubcategoryFor(nextCategory);
+
+    setDraft({
+      ...draft,
+      category: nextCategory.name,
+      categorySlug: nextCategory.slug,
+      subcategoryId: nextSubcategory?.id ?? "",
+      subcategoryMode: nextSubcategory?.id ? "existing" : "new",
+      newSubcategoryName: nextSubcategory?.id ? "" : nextSubcategory?.name ?? "",
+    });
+  }
+
   function openAdd() {
-    setDraft({ name: "", category: "Wellness", price: 0, discount: 0, stock: 0, images: [], description: "", featured: false, showOnHomepage: false, specialOffer: false, active: true });
+    const firstCategory = catalogOptions[0] ?? defaultCategoryOptions[0];
+    const firstSubcategory = firstSubcategoryFor(firstCategory);
+
+    setDraft({
+      name: "",
+      category: firstCategory.name,
+      categorySlug: firstCategory.slug,
+      subcategoryId: firstSubcategory?.id ?? "",
+      subcategoryMode: firstSubcategory?.id ? "existing" : "new",
+      newSubcategoryName: firstSubcategory?.id ? "" : firstSubcategory?.name ?? "",
+      price: 0,
+      discount: 0,
+      stock: 0,
+      images: [],
+      description: "",
+      featured: false,
+      showOnHomepage: false,
+      specialOffer: false,
+      active: true,
+    });
   }
 
   function openEdit(product: AdminProduct) {
-    setDraft({ id: product.id, name: product.name, category: product.category, price: product.price, discount: product.discount, stock: product.stock, images: product.images, description: product.description, featured: product.featured, showOnHomepage: product.showOnHomepage, specialOffer: product.specialOffer, active: product.active });
+    const categoryOption = catalogOptions.find((option) => option.name === product.category) ?? catalogOptions.find((option) => option.slug === slugify(product.category)) ?? catalogOptions[0] ?? defaultCategoryOptions[0];
+    const subcategory = categoryOption?.subcategories.find((option) => option.id === product.subcategoryId) ?? firstSubcategoryFor(categoryOption);
+
+    setDraft({
+      id: product.id,
+      name: product.name,
+      category: categoryOption?.name ?? product.category,
+      categorySlug: categoryOption?.slug ?? slugify(product.category),
+      subcategoryId: product.subcategoryId ?? subcategory?.id ?? "",
+      subcategoryMode: product.subcategoryId ? "existing" : "new",
+      newSubcategoryName: product.subcategoryId ? "" : product.subcategoryName ?? "",
+      price: product.price,
+      discount: product.discount,
+      stock: product.stock,
+      images: product.images,
+      description: product.description,
+      featured: product.featured,
+      showOnHomepage: product.showOnHomepage,
+      specialOffer: product.specialOffer,
+      active: product.active,
+    });
+  }
+
+  async function resolveSubcategoryId(currentDraft: DraftProduct) {
+    await ensureDefaultCatalog();
+
+    const { data: categoryRow, error: categoryError } = await supabase
+      .from("categories")
+      .select("id, name, slug")
+      .eq("slug", currentDraft.categorySlug)
+      .single();
+
+    if (categoryError || !categoryRow) throw categoryError ?? new Error("Select a main category.");
+
+    if (currentDraft.subcategoryMode === "existing") {
+      if (!currentDraft.subcategoryId) throw new Error("Select a subcategory or add a new one.");
+      return { categoryName: String(categoryRow.name) as ProductCategory, subcategoryId: currentDraft.subcategoryId };
+    }
+
+    const subcategoryName = currentDraft.newSubcategoryName.trim();
+    if (!subcategoryName) throw new Error("Subcategory name is required.");
+
+    const { data: subcategoryRow, error } = await supabase
+      .from("subcategories")
+      .upsert(
+        {
+          category_id: String(categoryRow.id),
+          name: subcategoryName,
+          slug: slugify(subcategoryName),
+          description: "",
+          is_active: true,
+        },
+        { onConflict: "category_id,slug" },
+      )
+      .select("id")
+      .single();
+
+    if (error || !subcategoryRow) throw error ?? new Error("Could not save subcategory.");
+
+    return { categoryName: String(categoryRow.name) as ProductCategory, subcategoryId: String(subcategoryRow.id) };
   }
 
   async function saveProduct() {
@@ -485,10 +735,23 @@ export function ProductsAdmin() {
     if (draft.stock < 0) return show("Stock cannot be negative", "error");
     setLoading(true);
     const slug = slugify(draft.name);
+    let categoryName = draft.category;
+    let subcategoryId = draft.subcategoryId;
+
+    try {
+      const resolved = await resolveSubcategoryId(draft);
+      categoryName = resolved.categoryName;
+      subcategoryId = resolved.subcategoryId;
+    } catch (error) {
+      setLoading(false);
+      return show(cleanError(error), "error");
+    }
+
     const payload = {
       name: draft.name,
       slug,
-      category: draft.category,
+      category: categoryName,
+      subcategory_id: subcategoryId,
       price: Number(draft.price.toFixed(2)),
       discount: Number(draft.discount.toFixed(2)),
       stock: draft.stock,
@@ -522,6 +785,7 @@ export function ProductsAdmin() {
     if (imageResult.error) show(cleanError(imageResult.error), "error");
     else show("Product saved in Supabase");
     setDraft(null);
+    await loadCategoryOptions();
     await loadProducts();
     setLoading(false);
   }
@@ -561,6 +825,9 @@ export function ProductsAdmin() {
     });
   }
 
+  const selectedDraftCategory = draft ? catalogOptions.find((option) => option.slug === draft.categorySlug) ?? catalogOptions[0] : null;
+  const selectedDraftSubcategories = selectedDraftCategory?.subcategories ?? [];
+
   return (
     <div>
       <ToastView toast={toast} />
@@ -569,7 +836,7 @@ export function ProductsAdmin() {
         <Input placeholder="Search products" value={query} onChange={(event) => setQuery(event.target.value)} />
         <select value={category} onChange={(event) => setCategory(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm">
           <option>All</option>
-          {categoryOptions.map((option) => <option key={option}>{option}</option>)}
+          {catalogOptions.map((option) => <option key={option.slug}>{option.name}</option>)}
         </select>
         <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm">
           <option value="name">Sort by name</option>
@@ -583,13 +850,16 @@ export function ProductsAdmin() {
         <TableShell>
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
-              <tr>{["Name", "Category", "Price", "Stock", "Flags", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr>
+              <tr>{["Name", "Category / Subcategory", "Price", "Stock", "Flags", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((product) => (
                 <tr key={product.id} className={cn("hover:bg-slate-50", product.active === false && "bg-slate-50/70 opacity-75")}>
                   <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="relative h-12 w-12 overflow-hidden rounded-md bg-slate-100"><Image src={product.images[0] ?? defaultImage} alt={product.name} fill className="object-cover" /></div><span className="font-bold text-slate-900">{product.name}</span></div></td>
-                  <td className="px-5 py-4">{product.category}</td>
+                  <td className="px-5 py-4">
+                    <span className="block font-bold text-slate-800">{product.category}</span>
+                    <span className="mt-1 block text-xs font-semibold text-slate-500">{product.subcategoryName ?? "No subcategory selected"}</span>
+                  </td>
                   <td className="px-5 py-4">{formatCurrency(product.price)}</td>
                   <td className="px-5 py-4"><Badge tone={product.stock > 0 ? "green" : "red"}>{product.stock}</Badge></td>
                   <td className="px-5 py-4"><div className="flex flex-wrap gap-2">{product.active === false ? <Badge tone="red">Unavailable</Badge> : null}{product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}{product.featured ? <Badge tone="amber">Featured</Badge> : null}{product.showOnHomepage ? <Badge tone="green">Homepage</Badge> : null}{product.specialOffer ? <Badge tone="green">Special Offer</Badge> : null}</div></td>
@@ -613,7 +883,17 @@ export function ProductsAdmin() {
         {draft ? (
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
-            <label className="text-sm font-bold text-slate-700">Category<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value as ProductCategory })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{categoryOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
+            <label className="text-sm font-bold text-slate-700">Main Category<select value={draft.categorySlug} onChange={(event) => setDraftCategory(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{catalogOptions.map((option) => <option key={option.slug} value={option.slug}>{option.name}</option>)}</select></label>
+            <label className="text-sm font-bold text-slate-700">Subcategory<select value={draft.subcategoryMode === "new" ? "__new" : draft.subcategoryId} onChange={(event) => {
+              const value = event.target.value;
+              setDraft(value === "__new" ? { ...draft, subcategoryMode: "new", subcategoryId: "", newSubcategoryName: "" } : { ...draft, subcategoryMode: "existing", subcategoryId: value, newSubcategoryName: "" });
+            }} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">
+              {selectedDraftSubcategories.filter((option) => option.id).map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+              <option value="__new">+ Add new subcategory</option>
+            </select></label>
+            {draft.subcategoryMode === "new" ? (
+              <label className="text-sm font-bold text-slate-700">New Subcategory<Input value={draft.newSubcategoryName} onChange={(event) => setDraft({ ...draft, newSubcategoryName: event.target.value })} placeholder="Example: Wheelchairs" /></label>
+            ) : null}
             <label className="text-sm font-bold text-slate-700">Price<Input type="number" min={1} step={0.01} value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
             <label className="text-sm font-bold text-slate-700">Discount<Input type="number" min={0} max={100} step={0.01} value={draft.discount} onChange={(event) => setDraft({ ...draft, discount: Number(event.target.value) })} /></label>
             <label className="text-sm font-bold text-slate-700">Stock<Input type="number" min={0} step={1} value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
@@ -630,7 +910,7 @@ export function ProductsAdmin() {
           </div>
         ) : null}
       </Modal>
-      <Modal open={Boolean(viewing)} title="Product Details" onClose={() => setViewing(null)}>{viewing ? <div className="space-y-3 text-sm text-slate-700"><p><b>Name:</b> {viewing.name}</p><p><b>Category:</b> {viewing.category}</p><p><b>Description:</b> {viewing.description}</p><p><b>Price:</b> {formatCurrency(viewing.price)}</p></div> : null}</Modal>
+      <Modal open={Boolean(viewing)} title="Product Details" onClose={() => setViewing(null)}>{viewing ? <div className="space-y-3 text-sm text-slate-700"><p><b>Name:</b> {viewing.name}</p><p><b>Category:</b> {viewing.category}</p><p><b>Subcategory:</b> {viewing.subcategoryName ?? "No subcategory selected"}</p><p><b>Description:</b> {viewing.description}</p><p><b>Price:</b> {formatCurrency(viewing.price)}</p></div> : null}</Modal>
       <ConfirmModal open={Boolean(deleting)} title="Delete product?" message={`Delete ${deleting?.name ?? "this product"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteProduct} />
       {actionMenu ? (
         <>

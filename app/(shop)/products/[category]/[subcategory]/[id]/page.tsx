@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Badge } from "@/components/ui/Badge";
 import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcrumbs";
 import { CommerceProductActions } from "@/components/product/catalog/CommerceProductActions";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { getCommerceProduct, getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductImages } from "@/lib/catalog";
+import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductImages } from "@/lib/catalog";
+import { getCatalogProduct } from "@/lib/catalog/data";
 import { formatCurrency } from "@/lib/utils";
 
 export function generateStaticParams(): { category: string; subcategory: string; id: string }[] {
@@ -14,7 +16,7 @@ export function generateStaticParams(): { category: string; subcategory: string;
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; subcategory: string; id: string }> }): Promise<Metadata> {
   const { category, subcategory, id } = await params;
-  const result = getCommerceProduct(category, subcategory, id);
+  const result = await getCatalogProduct(category, subcategory, id);
 
   return {
     title: result ? result.product.name : "Product",
@@ -23,8 +25,9 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 }
 
 export default async function CommerceProductDetailPage({ params }: { params: Promise<{ category: string; subcategory: string; id: string }> }) {
+  await connection();
   const { category: categorySlug, subcategory: subcategorySlug, id } = await params;
-  const result = getCommerceProduct(categorySlug, subcategorySlug, id);
+  const result = await getCatalogProduct(categorySlug, subcategorySlug, id);
   if (!result) notFound();
 
   const { category, subcategory, product } = result;

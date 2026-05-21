@@ -35,7 +35,7 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
     id: row.product_id ?? row.id,
     name: productRow?.name ?? row.name,
     price: productRow ? Number(productRow.price) : Number(row.price_per_day),
-    category: (productRow?.category ?? "Hospital Equipment") as ProductCategory,
+    category: (productRow?.category ?? "Mobility") as ProductCategory,
     images: images.length ? images : [row.image_url ?? defaultImage],
     stock: productRow?.stock ?? (row.availability ? 1 : 0),
     discount: productRow ? Number(productRow.discount) : 0,

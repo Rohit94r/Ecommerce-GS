@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcrumbs";
 import { CommerceProductCard } from "@/components/product/catalog/CommerceProductCard";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { getSubcategory } from "@/lib/catalog";
+import { getCatalogSubcategory } from "@/lib/catalog/data";
 import { categories } from "@/lib/dummyData";
 
 export function generateStaticParams() {
@@ -18,7 +19,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; subcategory: string }> }): Promise<Metadata> {
   const { category, subcategory } = await params;
-  const result = getSubcategory(category, subcategory);
+  const result = await getCatalogSubcategory(category, subcategory);
 
   return {
     title: result ? result.subcategory.name : "Products",
@@ -27,8 +28,9 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 }
 
 export default async function SubcategoryPage({ params }: { params: Promise<{ category: string; subcategory: string }> }) {
+  await connection();
   const { category: categorySlug, subcategory: subcategorySlug } = await params;
-  const result = getSubcategory(categorySlug, subcategorySlug);
+  const result = await getCatalogSubcategory(categorySlug, subcategorySlug);
   if (!result) notFound();
 
   const { category, subcategory } = result;

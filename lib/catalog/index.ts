@@ -1,5 +1,5 @@
 import { categories, commerceProductImages } from "@/lib/dummyData";
-import type { CommerceCategory, CommerceProduct, CommerceSubcategory, Product } from "@/types";
+import type { CommerceCategory, CommerceProduct, CommerceSubcategory, Product, ProductCategory } from "@/types";
 
 const productCopy: Record<string, { description: string; features: string[]; brand: string }> = {
   wc1: {
@@ -123,15 +123,15 @@ export function getCommerceProduct(categorySlug: string, subcategorySlug: string
 }
 
 export function getCommerceProductImages(product: CommerceProduct) {
-  return commerceProductImages[product.id] ?? [product.image];
+  return product.images?.length ? product.images : commerceProductImages[product.id] ?? [product.image];
 }
 
 export function getCommerceProductDescription(product: CommerceProduct) {
-  return productCopy[product.id]?.description ?? `${product.name} from Gargi Surgical & Healthcare, selected for dependable home and clinical care.`;
+  return product.description || productCopy[product.id]?.description || `${product.name} from Gargi Surgical & Healthcare, selected for dependable home and clinical care.`;
 }
 
 export function getCommerceProductFeatures(product: CommerceProduct) {
-  return productCopy[product.id]?.features ?? ["Quality checked before dispatch", "Support available on call", "Same Day / Next Day Delivery Available"];
+  return product.features?.length ? product.features : productCopy[product.id]?.features ?? ["Quality checked before dispatch", "Support available on call", "Same Day / Next Day Delivery Available"];
 }
 
 export function toCartProduct(product: CommerceProduct, category: CommerceCategory, subcategory: CommerceSubcategory): Product {
@@ -139,13 +139,13 @@ export function toCartProduct(product: CommerceProduct, category: CommerceCatego
     id: product.id,
     name: product.name,
     price: Math.round(product.price - (product.price * product.discount) / 100),
-    category: "Wellness",
+    category: category.name as ProductCategory,
     images: getCommerceProductImages(product),
     stock: product.stock ? 10 : 0,
     discount: product.discount,
     isRental: false,
     description: getCommerceProductDescription(product),
     features: getCommerceProductFeatures(product),
-    brand: productCopy[product.id]?.brand ?? `${category.name} ${subcategory.name}`,
+    brand: product.brand || productCopy[product.id]?.brand || `${category.name} ${subcategory.name}`,
   };
 }

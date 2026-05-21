@@ -14,11 +14,11 @@ export const business = {
 };
 
 export const serviceCategories: { name: ProductCategory; description: string }[] = [
-  { name: "Hospital Equipment", description: "Beds, monitors, suction machines and clinical essentials." },
-  { name: "Mobility Products", description: "Wheelchairs, walkers, rollators and patient transfer support." },
-  { name: "Oxygen on Rent", description: "Oxygen concentrators and cylinders for home-care needs." },
-  { name: "Wellness", description: "Daily health monitoring, recovery and home wellness products." },
-  { name: "Orthocare", description: "Braces, supports, belts and post-operative care products." },
+  { name: "Mobility", description: "Wheelchairs, walkers and daily movement support for safer home recovery." },
+  { name: "Personal Hygiene", description: "Reliable hygiene essentials for adults, babies and everyday care routines." },
+  { name: "Surgical", description: "Sterile surgical consumables, gloves and dressing support for clinics and homes." },
+  { name: "Orthopedic", description: "Knee, back and joint support products for recovery and everyday comfort." },
+  { name: "Digital Monitoring", description: "BP monitors, oximeters and home devices for daily health checks." },
 ];
 
 export const categories: import("@/types").CommerceCategory[] = [
