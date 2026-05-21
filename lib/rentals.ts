@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { isDataUrl, productMediaRoute } from "@/lib/media";
 import type { Product, ProductCategory, Rental } from "@/types";
 
 type RentalRow = {
@@ -32,7 +33,9 @@ const defaultImage = "/media/Home-banner2.png";
 
 function mapRental(row: RentalRow): { product: Product; rental: Rental } {
   const productRow = Array.isArray(row.products) ? row.products[0] : row.products;
-  const images = productRow?.product_images?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((image) => image.image_url) ?? [];
+  const images = productRow?.product_images
+    ?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((image, index) => (productRow.id && isDataUrl(image.image_url) ? productMediaRoute(productRow.id, index) : image.image_url)) ?? [];
 
   const product: Product = {
     id: row.product_id ?? row.id,

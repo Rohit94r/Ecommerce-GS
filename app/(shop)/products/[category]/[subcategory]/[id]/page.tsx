@@ -6,7 +6,7 @@ import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcru
 import { CommerceProductActions } from "@/components/product/catalog/CommerceProductActions";
 import { ProductMediaGallery } from "@/components/product/catalog/ProductMediaGallery";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductMedia } from "@/lib/catalog";
+import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductMedia, toCartProduct } from "@/lib/catalog";
 import { getCatalogProduct } from "@/lib/catalog/data";
 import { formatCurrency } from "@/lib/utils";
 
@@ -33,6 +33,7 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
   const { category, subcategory, product } = result;
   const discountedPrice = Math.round(product.price - (product.price * product.discount) / 100);
   const media = getCommerceProductMedia(product);
+  const cartProduct = toCartProduct(product, category, subcategory);
 
   return (
     <SiteShell>
@@ -56,7 +57,7 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
               <Badge tone="slate">{subcategory.name}</Badge>
             </div>
             <h1 className="mt-5 text-4xl font-black leading-tight text-slate-950">{product.name}</h1>
-            <p className="mt-4 text-lg leading-8 text-slate-600">{getCommerceProductDescription(product)}</p>
+            <p className="mt-4 whitespace-pre-line text-lg leading-8 text-slate-600">{getCommerceProductDescription(product)}</p>
 
             <div className="mt-6 flex flex-wrap items-end gap-3">
               <span className="text-4xl font-black text-slate-950">{formatCurrency(discountedPrice)}</span>
@@ -75,14 +76,14 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
               ))}
             </ul>
 
-            <CommerceProductActions category={category} subcategory={subcategory} product={product} />
+            <CommerceProductActions cartProduct={cartProduct} inStock={product.stock} />
           </div>
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_360px]">
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-black text-slate-950">Product information</h2>
-            <p className="mt-4 leading-8 text-slate-600">{getCommerceProductDescription(product)}</p>
+            <p className="mt-4 whitespace-pre-line leading-8 text-slate-600">{getCommerceProductDescription(product)}</p>
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg bg-slate-50 p-4">
                 <dt className="text-sm font-black text-slate-500">Brand</dt>

@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { isVideoMediaUrl } from "@/lib/catalog";
+import { isDataUrl, productMediaRoute } from "@/lib/media";
 import type { Product, ProductCategory, ProductMedia } from "@/types";
 
 type HomeProductRow = {
@@ -30,7 +31,7 @@ type HomeProductRow = {
 const defaultImage = "/media/Home-banner2.png";
 
 function toProduct(row: HomeProductRow): Product {
-  const media = toProductMedia(row.product_images ?? []);
+  const media = toProductMedia(row.product_images ?? [], row.id);
   const images = media.filter((item) => item.type === "image").map((item) => item.url);
   const videos = media.filter((item) => item.type === "video").map((item) => item.url);
   const subcategory = Array.isArray(row.subcategories) ? row.subcategories[0] : row.subcategories;
@@ -79,13 +80,13 @@ export async function getHomepageProducts() {
   }
 }
 
-function toProductMedia(rows: NonNullable<HomeProductRow["product_images"]>): ProductMedia[] {
+function toProductMedia(rows: NonNullable<HomeProductRow["product_images"]>, productId: string): ProductMedia[] {
   return rows
     .slice()
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((row) => ({
+    .map((row, index) => ({
       type: isVideoMediaUrl(row.image_url, row.media_type) ? ("video" as const) : ("image" as const),
-      url: row.image_url,
+      url: isDataUrl(row.image_url) ? productMediaRoute(productId, index) : row.image_url,
     }))
     .sort((a, b) => Number(a.type === "video") - Number(b.type === "video"));
 }

@@ -9,6 +9,7 @@ export function ProductMediaGallery({ media, productName }: { media: ProductMedi
   const [activeIndex, setActiveIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const active = items[Math.min(activeIndex, items.length - 1)];
+  const activeIsDataUrl = active.type === "image" && active.url.startsWith("data:");
 
   function selectMedia(index: number) {
     setActiveIndex(index);
@@ -57,7 +58,8 @@ export function ProductMediaGallery({ media, productName }: { media: ProductMedi
               src={active.url}
               alt={productName}
               fill
-              priority
+              priority={!activeIsDataUrl}
+              unoptimized={activeIsDataUrl}
               sizes="(max-width: 1024px) 100vw, 52vw"
               className="object-contain p-5 transition-transform duration-200"
               style={{ transform: `scale(${zoom})` }}

@@ -149,14 +149,14 @@ export function getCommerceProductFeatures(product: CommerceProduct) {
 }
 
 export function toCartProduct(product: CommerceProduct, category: CommerceCategory, subcategory: CommerceSubcategory): Product {
+  const images = getCommerceProductImages(product);
+
   return {
     id: product.id,
     name: product.name,
     price: Math.round(product.price - (product.price * product.discount) / 100),
     category: category.name as ProductCategory,
-    images: getCommerceProductImages(product),
-    videos: product.videos ?? [],
-    media: getCommerceProductMedia(product),
+    images: [images[0]],
     detailHref: `/products/${category.slug}/${subcategory.slug}/${product.id}`,
     stock: product.stock ? 10 : 0,
     discount: product.discount,

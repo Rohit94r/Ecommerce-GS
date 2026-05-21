@@ -3,22 +3,18 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useCart } from "@/hooks/useCart";
-import { toCartProduct } from "@/lib/catalog";
 import { business } from "@/lib/dummyData";
-import type { CommerceCategory, CommerceProduct, CommerceSubcategory } from "@/types";
+import type { Product } from "@/types";
 
 export function CommerceProductActions({
-  category,
-  subcategory,
-  product,
+  cartProduct,
+  inStock,
 }: {
-  category: CommerceCategory;
-  subcategory: CommerceSubcategory;
-  product: CommerceProduct;
+  cartProduct: Product;
+  inStock: boolean;
 }) {
   const { addItem, items } = useCart();
-  const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
-  const cartProduct = toCartProduct(product, category, subcategory);
+  const cartQuantity = items.find((item) => item.product.id === cartProduct.id)?.quantity ?? 0;
 
   return (
     <div className="mt-8 grid gap-3">
@@ -28,7 +24,7 @@ export function CommerceProductActions({
         </div>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        <Button disabled={!product.stock} onClick={() => addItem(cartProduct)} className="w-full">
+        <Button disabled={!inStock} onClick={() => addItem(cartProduct)} className="w-full">
           {cartQuantity > 0 ? `Add More (${cartQuantity})` : "Add to Cart"}
         </Button>
         {cartQuantity > 0 ? (
