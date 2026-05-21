@@ -25,7 +25,7 @@ export class SignupOtpEmailError extends Error {
 
 export async function sendSignupOtpEmail({ to, otp }: SendSignupOtpEmailInput) {
   const user = readEnvValue("GMAIL_SMTP_USER", "gargisurgical58@gmail.com");
-  const pass = readEnvValue("GMAIL_SMTP_APP_PASSWORD", readEnvValue("GMAIL_APP_PASSWORD", "")).replace(/\s+/g, "");
+  const pass = normalizeGmailAppPassword(readEnvValue("GMAIL_SMTP_APP_PASSWORD", readEnvValue("GMAIL_APP_PASSWORD", "")));
   const fromEmail = readEnvValue("GMAIL_FROM_EMAIL", user);
 
   if (!pass) {
@@ -107,6 +107,10 @@ function readEnvValue(name: string, fallback: string) {
   const rawValue = process.env[name] ?? fallback;
   const withoutKey = rawValue.startsWith(`${name}=`) ? rawValue.slice(name.length + 1) : rawValue;
   return withoutKey.trim().replace(/^['"]|['"]$/g, "");
+}
+
+function normalizeGmailAppPassword(value: string) {
+  return value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 16);
 }
 
 function describeMailError(error: unknown) {
