@@ -3,7 +3,12 @@ import { LinkButton } from "@/components/ui/Button";
 
 const heroBanners = [
   {
-    src: "/media/Home-banner1.jpeg",
+    src: "/media/Home-banner1.png",
+    alt: "Gargi Surgical and Healthcare home banner",
+    position: "center",
+  },
+  {
+    src: "/media/Home-banner4.png",
     alt: "Gargi Surgical and Healthcare home banner",
     position: "center",
   },
