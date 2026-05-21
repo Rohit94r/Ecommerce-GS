@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
-import type { Product, ProductCategory } from "@/types";
+import { isVideoMediaUrl } from "@/lib/catalog";
+import type { Product, ProductCategory, ProductMedia } from "@/types";
 
 type HomeProductRow = {
   id: string;
@@ -15,13 +16,26 @@ type HomeProductRow = {
   is_featured: boolean | null;
   show_on_homepage: boolean | null;
   is_special_offer: boolean | null;
-  product_images?: { image_url: string; sort_order: number | null }[];
+  subcategory_id: string | null;
+  subcategories?: {
+    slug: string;
+    categories?: { slug: string } | { slug: string }[] | null;
+  } | {
+    slug: string;
+    categories?: { slug: string } | { slug: string }[] | null;
+  }[] | null;
+  product_images?: { image_url: string; sort_order: number | null; media_type?: string | null }[];
 };
 
 const defaultImage = "/media/Home-banner2.png";
 
 function toProduct(row: HomeProductRow): Product {
-  const images = row.product_images?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((image) => image.image_url) ?? [];
+  const media = toProductMedia(row.product_images ?? []);
+  const images = media.filter((item) => item.type === "image").map((item) => item.url);
+  const videos = media.filter((item) => item.type === "video").map((item) => item.url);
+  const subcategory = Array.isArray(row.subcategories) ? row.subcategories[0] : row.subcategories;
+  const category = Array.isArray(subcategory?.categories) ? subcategory?.categories[0] : subcategory?.categories;
+  const detailHref = category?.slug && subcategory?.slug ? `/products/${category.slug}/${subcategory.slug}/${row.id}` : "/products";
 
   return {
     id: row.id,
@@ -31,6 +45,9 @@ function toProduct(row: HomeProductRow): Product {
     discount: Number(row.discount),
     stock: row.stock,
     images: images.length ? images : [defaultImage],
+    videos,
+    media: media.length ? media : [{ type: "image", url: defaultImage }],
+    detailHref,
     description: row.description ?? "",
     features: row.features ?? [],
     brand: row.brand ?? "Gargi Care",
@@ -46,7 +63,7 @@ export async function getHomepageProducts() {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, name, category, price, discount, stock, description, brand, features, is_rental, is_featured, show_on_homepage, is_special_offer, product_images(image_url, sort_order)")
+      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_rental, is_featured, show_on_homepage, is_special_offer, subcategories(slug, categories(slug)), product_images(*)")
       .eq("is_active", true)
       .eq("show_on_homepage", true)
       .order("is_special_offer", { ascending: false })
@@ -60,4 +77,15 @@ export async function getHomepageProducts() {
   } catch {
     return [];
   }
+}
+
+function toProductMedia(rows: NonNullable<HomeProductRow["product_images"]>): ProductMedia[] {
+  return rows
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((row) => ({
+      type: isVideoMediaUrl(row.image_url, row.media_type) ? ("video" as const) : ("image" as const),
+      url: row.image_url,
+    }))
+    .sort((a, b) => Number(a.type === "video") - Number(b.type === "video"));
 }

@@ -11,7 +11,9 @@ import type { Product, Rental } from "@/types";
 
 export function RentalCalculator({ product, rental }: { product: Product; rental: Rental }) {
   const [days, setDays] = useState(7);
-  const total = days * rental.price_per_day;
+  const weekPrice = rental.price_per_week ?? rental.price_per_day * 7;
+  const monthPrice = rental.price_per_month ?? rental.price_per_day * 30;
+  const total = days >= 30 ? Math.ceil(days / 30) * monthPrice : days >= 7 ? Math.ceil(days / 7) * weekPrice : days * rental.price_per_day;
 
   return (
     <div className="rounded-md border border-[#047068]/15 bg-white p-6 shadow-sm">
@@ -19,7 +21,11 @@ export function RentalCalculator({ product, rental }: { product: Product; rental
         <h2 className="text-xl font-bold text-slate-950">Rental estimate</h2>
         <Badge tone={rental.availability ? "green" : "red"}>{rental.availability ? "Available" : "Unavailable"}</Badge>
       </div>
-      <p className="mt-4 text-3xl font-black text-slate-950">{formatCurrency(rental.price_per_day)} <span className="text-base font-semibold text-slate-500">per day</span></p>
+      <div className="mt-4 grid gap-2 rounded-lg bg-slate-50 p-4">
+        <p className="text-3xl font-black text-slate-950">{formatCurrency(rental.price_per_day)} <span className="text-base font-semibold text-slate-500">per day</span></p>
+        <p className="text-sm font-bold text-slate-600">{formatCurrency(weekPrice)} per week</p>
+        <p className="text-sm font-bold text-slate-600">{formatCurrency(monthPrice)} per month</p>
+      </div>
       <label htmlFor="days" className="mt-6 block text-sm font-bold text-slate-700">
         Number of days
       </label>

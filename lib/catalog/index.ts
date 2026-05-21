@@ -1,5 +1,5 @@
 import { categories, commerceProductImages } from "@/lib/dummyData";
-import type { CommerceCategory, CommerceProduct, CommerceSubcategory, Product, ProductCategory } from "@/types";
+import type { CommerceCategory, CommerceProduct, CommerceSubcategory, Product, ProductCategory, ProductMedia } from "@/types";
 
 const productCopy: Record<string, { description: string; features: string[]; brand: string }> = {
   wc1: {
@@ -126,6 +126,20 @@ export function getCommerceProductImages(product: CommerceProduct) {
   return product.images?.length ? product.images : commerceProductImages[product.id] ?? [product.image];
 }
 
+export function isVideoMediaUrl(url: string, type?: string | null) {
+  const normalized = url.toLowerCase();
+  return type === "video" || normalized.startsWith("data:video/") || /\.(mp4|webm|ogg|mov)(\?|#|$)/.test(normalized);
+}
+
+export function getCommerceProductMedia(product: CommerceProduct): ProductMedia[] {
+  if (product.media?.length) return product.media;
+
+  const images = getCommerceProductImages(product).map((url) => ({ type: "image" as const, url }));
+  const videos = (product.videos ?? []).map((url) => ({ type: "video" as const, url }));
+
+  return [...images, ...videos];
+}
+
 export function getCommerceProductDescription(product: CommerceProduct) {
   return product.description || productCopy[product.id]?.description || `${product.name} from Gargi Surgical & Healthcare, selected for dependable home and clinical care.`;
 }
@@ -141,6 +155,9 @@ export function toCartProduct(product: CommerceProduct, category: CommerceCatego
     price: Math.round(product.price - (product.price * product.discount) / 100),
     category: category.name as ProductCategory,
     images: getCommerceProductImages(product),
+    videos: product.videos ?? [],
+    media: getCommerceProductMedia(product),
+    detailHref: `/products/${category.slug}/${subcategory.slug}/${product.id}`,
     stock: product.stock ? 10 : 0,
     discount: product.discount,
     isRental: false,

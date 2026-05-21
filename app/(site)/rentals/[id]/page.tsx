@@ -23,8 +23,8 @@ export default async function RentalDetailPage({ params }: { params: Promise<{ i
     <SiteShell>
       <section className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_420px] lg:px-8">
         <div>
-          <div className="relative aspect-[16/10] overflow-hidden rounded-md bg-slate-100 shadow-sm">
-            <Image src={item.product.images[0]} alt={item.product.name} fill priority sizes="(max-width: 1024px) 100vw, 60vw" className="object-cover" />
+          <div className="relative aspect-[16/10] overflow-hidden rounded-md bg-white p-5 shadow-sm">
+            <Image src={item.product.images[0]} alt={item.product.name} fill priority sizes="(max-width: 1024px) 100vw, 60vw" className="object-contain p-5" />
           </div>
           <p className="mt-8 text-sm font-black uppercase tracking-[0.18em] text-[#047068]">{item.product.category}</p>
           <h1 className="mt-2 text-4xl font-bold leading-tight text-slate-950">{item.product.name}</h1>

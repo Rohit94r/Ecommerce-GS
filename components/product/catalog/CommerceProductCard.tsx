@@ -27,13 +27,13 @@ export function CommerceProductCard({
   return (
     <article className={`group overflow-hidden rounded-lg border bg-white shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:border-[#047068]/25 hover:shadow-xl hover:shadow-[#047068]/10 ${cartQuantity > 0 ? "border-[#047068] ring-2 ring-[#047068]/15" : "border-slate-200/80"}`}>
       <Link href={href} className="block">
-        <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+        <div className="relative aspect-[4/3] overflow-hidden bg-slate-50 p-3">
           <Image
             src={getCommerceProductImages(product)[0]}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition duration-500 ease-out group-hover:scale-105"
+            className="object-contain p-3 transition duration-500 ease-out group-hover:scale-105"
           />
           <div className="absolute left-3 top-3 flex flex-wrap gap-2">
             {product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}
@@ -49,7 +49,7 @@ export function CommerceProductCard({
       <div className="p-5">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#047068]">{subcategory.name}</p>
         <Link href={href}>
-          <h2 className="mt-2 text-lg font-black text-slate-950 transition hover:text-[#047068]">{product.name}</h2>
+          <h2 className="mt-2 line-clamp-2 min-h-14 text-lg font-black leading-7 text-slate-950 transition hover:text-[#047068]">{product.name}</h2>
         </Link>
         <div className="mt-4 flex items-end justify-between gap-3">
           <div>

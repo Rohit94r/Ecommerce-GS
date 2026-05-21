@@ -9,11 +9,11 @@ import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/utils/supabase/client";
 import { cn, formatCurrency, slugify } from "@/lib/utils";
 import { categories as catalogCategories } from "@/lib/dummyData";
-import type { Blog, GoogleReview, Order, Product, ProductCategory, Rental } from "@/types";
+import type { Blog, GoogleReview, Order, Product, ProductCategory, ProductMedia, Rental } from "@/types";
 
 type Toast = { message: string; tone: "success" | "error" };
 type SortDirection = "asc" | "desc";
-type ProductImageRow = { image_url: string; sort_order: number | null };
+type ProductImageRow = { image_url: string; sort_order: number | null; media_type?: string | null };
 type ProductSubcategoryRow = {
   id: string;
   name: string;
@@ -85,7 +85,10 @@ type RentalRow = {
   product_id: string | null;
   name: string;
   slug: string;
+  category?: ProductCategory | null;
   price_per_day: number | string;
+  price_per_week?: number | string | null;
+  price_per_month?: number | string | null;
   availability: boolean;
   description: string;
   image_url: string | null;
@@ -129,6 +132,8 @@ type DraftProduct = {
   discount: number;
   stock: number;
   images: string[];
+  videos: string[];
+  videoUrl: string;
   description: string;
   featured?: boolean;
   showOnHomepage?: boolean;
@@ -211,6 +216,31 @@ function readFiles(files: FileList | null, onLoad: (images: string[]) => void) {
   ).then(onLoad);
 }
 
+function isVideoMediaUrl(url: string, type?: string | null) {
+  const normalized = url.toLowerCase();
+  return type === "video" || normalized.startsWith("data:video/") || /\.(mp4|webm|ogg|mov)(\?|#|$)/.test(normalized);
+}
+
+function toAdminMedia(images: string[], videos: string[]): ProductMedia[] {
+  return [
+    ...images.map((url) => ({ type: "image" as const, url })),
+    ...videos.map((url) => ({ type: "video" as const, url })),
+  ];
+}
+
+function isDefaultRentalCategory(category: string | undefined) {
+  return defaultCategoryOptions.some((option) => option.name === category);
+}
+
+function moveItem<T>(items: T[], index: number, direction: -1 | 1) {
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= items.length) return items;
+  const next = [...items];
+  const [item] = next.splice(index, 1);
+  next.splice(nextIndex, 0, item);
+  return next;
+}
+
 function ConfirmModal({ open, title, message, onCancel, onConfirm }: { open: boolean; title: string; message: string; onCancel: () => void; onConfirm: () => void }) {
   return (
     <Modal open={open} title={title} onClose={onCancel}>
@@ -224,8 +254,11 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm }: { open: boo
 }
 
 function mapProduct(row: ProductRow): AdminProduct {
-  const images = row.product_images?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((image) => image.image_url) ?? [];
+  const mediaRows = row.product_images?.slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) ?? [];
+  const images = mediaRows.filter((item) => !isVideoMediaUrl(item.image_url, item.media_type)).map((image) => image.image_url);
+  const videos = mediaRows.filter((item) => isVideoMediaUrl(item.image_url, item.media_type)).map((video) => video.image_url);
   const subcategory = Array.isArray(row.subcategories) ? row.subcategories[0] : row.subcategories;
+  const media = toAdminMedia(images.length ? images : [defaultImage], videos);
 
   return {
     id: row.id,
@@ -233,6 +266,8 @@ function mapProduct(row: ProductRow): AdminProduct {
     price: Number(row.price),
     category: row.category,
     images: images.length ? images : [defaultImage],
+    videos,
+    media,
     stock: row.stock,
     discount: Number(row.discount),
     isRental: row.is_rental,
@@ -254,7 +289,10 @@ function mapRental(row: RentalRow): AdminRental {
     id: row.id,
     product_id: row.product_id ?? row.id,
     name: row.name,
+    category: row.category ?? "Mobility",
     price_per_day: Number(row.price_per_day),
+    price_per_week: row.price_per_week ? Number(row.price_per_week) : undefined,
+    price_per_month: row.price_per_month ? Number(row.price_per_month) : undefined,
     availability: row.availability,
     description: row.description,
     image: row.image_url ?? defaultImage,
@@ -597,7 +635,7 @@ export function ProductsAdmin() {
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("products").select("*, subcategories(id, name, slug, category_id), product_images(image_url, sort_order)").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("products").select("*, subcategories(id, name, slug, category_id), product_images(*)").order("created_at", { ascending: false });
     if (error) show(cleanError(error), "error");
     else setItems(((data ?? []) as ProductRow[]).map(mapProduct));
     setLoading(false);
@@ -656,6 +694,8 @@ export function ProductsAdmin() {
       discount: 0,
       stock: 0,
       images: [],
+      videos: [],
+      videoUrl: "",
       description: "",
       featured: false,
       showOnHomepage: false,
@@ -680,6 +720,8 @@ export function ProductsAdmin() {
       discount: product.discount,
       stock: product.stock,
       images: product.images,
+      videos: product.videos ?? [],
+      videoUrl: "",
       description: product.description,
       featured: product.featured,
       showOnHomepage: product.showOnHomepage,
@@ -775,13 +817,22 @@ export function ProductsAdmin() {
 
     const productId = result.data.id as string;
     await supabase.from("product_images").delete().eq("product_id", productId);
-    const imageRows = (draft.images.length ? draft.images : [defaultImage]).map((image, index) => ({
+    const mediaRows = toAdminMedia(draft.images.length ? draft.images : [defaultImage], draft.videos).map((item, index) => ({
       product_id: productId,
-      image_url: image,
+      image_url: item.url,
       alt_text: draft.name,
       sort_order: index,
+      media_type: item.type,
     }));
-    const imageResult = await supabase.from("product_images").insert(imageRows);
+    let imageResult = await supabase.from("product_images").insert(mediaRows);
+    if (imageResult.error && cleanError(imageResult.error).toLowerCase().includes("media_type")) {
+      imageResult = await supabase.from("product_images").insert(mediaRows.map((row) => ({
+        product_id: row.product_id,
+        image_url: row.image_url,
+        alt_text: row.alt_text,
+        sort_order: row.sort_order,
+      })));
+    }
     if (imageResult.error) show(cleanError(imageResult.error), "error");
     else show("Product saved in Supabase");
     setDraft(null);
@@ -904,8 +955,45 @@ export function ProductsAdmin() {
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.featured)} onChange={(event) => setDraft({ ...draft, featured: event.target.checked })} /> Featured</label>
             </div>
             <label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
-            <label className="text-sm font-bold text-slate-700 md:col-span-2">Images<Input type="file" accept="image/*" multiple onChange={(event) => readFiles(event.target.files, (images) => setDraft({ ...draft, images }))} /></label>
-            {draft.images.length > 0 ? <div className="flex flex-wrap gap-3 md:col-span-2">{draft.images.map((image) => <div key={image} className="relative h-20 w-20 overflow-hidden rounded-md bg-slate-100"><Image src={image} alt="Preview" fill className="object-cover" /></div>)}</div> : null}
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:col-span-2">
+              <div>
+                <p className="text-sm font-black text-slate-800">Media</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Recommended product photos: 1200 x 900 px, 4:3 ratio, white or transparent background. Product is shown fully with no crop. Videos are saved after photos and autoplay on the detail page.</p>
+              </div>
+              <label className="text-sm font-bold text-slate-700">Product photos<Input type="file" accept="image/*" multiple onChange={(event) => readFiles(event.target.files, (images) => setDraft({ ...draft, images: [...draft.images, ...images] }))} /></label>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Input value={draft.videoUrl} onChange={(event) => setDraft({ ...draft, videoUrl: event.target.value })} placeholder="Video URL: https://...mp4 or YouTube-hosted direct video" />
+                <Button type="button" variant="secondary" onClick={() => {
+                  const videoUrl = draft.videoUrl.trim();
+                  if (!videoUrl) return;
+                  setDraft({ ...draft, videos: [...draft.videos, videoUrl], videoUrl: "" });
+                }}>Add Video</Button>
+              </div>
+              {(draft.images.length || draft.videos.length) ? (
+                <div className="grid gap-3">
+                  {draft.images.map((image, index) => (
+                    <div key={`${image}-${index}`} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[80px_1fr_auto] sm:items-center">
+                      <div className="relative h-20 w-20 overflow-hidden rounded-md bg-white">
+                        <Image src={image} alt="Product preview" fill className="object-contain p-2" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-700">Photo {index + 1}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="ghost" onClick={() => setDraft({ ...draft, images: moveItem(draft.images, index, -1) })}>Up</Button>
+                        <Button type="button" variant="ghost" onClick={() => setDraft({ ...draft, images: moveItem(draft.images, index, 1) })}>Down</Button>
+                        <Button type="button" variant="danger" onClick={() => setDraft({ ...draft, images: draft.images.filter((_, itemIndex) => itemIndex !== index) })}>Remove</Button>
+                      </div>
+                    </div>
+                  ))}
+                  {draft.videos.map((video, index) => (
+                    <div key={`${video}-${index}`} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[80px_1fr_auto] sm:items-center">
+                      <video src={video} muted playsInline preload="metadata" className="h-20 w-20 rounded-md bg-slate-950 object-cover" />
+                      <p className="truncate text-sm font-bold text-slate-700">Video {index + 1} <span className="font-semibold text-slate-500">(shown after photos)</span></p>
+                      <Button type="button" variant="danger" onClick={() => setDraft({ ...draft, videos: draft.videos.filter((_, itemIndex) => itemIndex !== index) })}>Remove</Button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveProduct} disabled={loading}>{loading ? "Saving..." : "Save Product"}</Button></div>
           </div>
         ) : null}
@@ -958,11 +1046,15 @@ export function RentalsAdmin() {
   async function saveRental() {
     if (!draft?.name.trim()) return show("Rental name is required", "error");
     if (draft.price_per_day <= 0) return show("Price per day is required", "error");
+    if ((draft.price_per_week ?? 0) < 0 || (draft.price_per_month ?? 0) < 0) return show("Rental prices cannot be negative", "error");
     setLoading(true);
     const payload = {
       name: draft.name,
       slug: slugify(draft.name),
+      category: draft.category ?? "Mobility",
       price_per_day: draft.price_per_day,
+      price_per_week: draft.price_per_week || null,
+      price_per_month: draft.price_per_month || null,
       availability: draft.availability,
       description: draft.description,
       image_url: draft.image,
@@ -992,19 +1084,24 @@ export function RentalsAdmin() {
   return (
     <div>
       <ToastView toast={toast} />
-      <SectionHeader title="Rentals" description="Live Supabase rentals, daily pricing and availability." action={<Button onClick={() => setDraft({ product_id: "", name: "", price_per_day: 0, availability: true, description: "", image: defaultImage })}>Add Rental</Button>} />
+      <SectionHeader title="Rentals" description="Live Supabase rentals with day, week and month pricing." action={<Button onClick={() => setDraft({ product_id: "", name: "", category: "Mobility", price_per_day: 0, price_per_week: 0, price_per_month: 0, availability: true, description: "", image: defaultImage })}>Add Rental</Button>} />
       <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <label className="text-sm font-bold text-slate-700">Rental calculator<Input className="mt-2 max-w-xs" type="number" min={1} value={days} onChange={(event) => setDays(Number(event.target.value))} /></label>
       </div>
       {items.length ? (
         <TableShell>
           <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Product", "Price per day", "Availability", `${days} day estimate`, "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead>
+            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Product", "Category", "Day / Week / Month", "Availability", `${days} day estimate`, "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
               {items.map((rental) => (
                 <tr key={rental.id ?? rental.product_id} className="hover:bg-slate-50">
                   <td className="px-5 py-4 font-bold text-slate-900">{rental.name}</td>
-                  <td className="px-5 py-4">{formatCurrency(rental.price_per_day)}</td>
+                  <td className="px-5 py-4">{rental.category}</td>
+                  <td className="px-5 py-4">
+                    <span className="block font-bold">{formatCurrency(rental.price_per_day)}/day</span>
+                    <span className="block text-xs text-slate-500">{formatCurrency(rental.price_per_week ?? rental.price_per_day * 7)}/week</span>
+                    <span className="block text-xs text-slate-500">{formatCurrency(rental.price_per_month ?? rental.price_per_day * 30)}/month</span>
+                  </td>
                   <td className="px-5 py-4"><Badge tone={rental.availability ? "green" : "red"}>{rental.availability ? "Available" : "Unavailable"}</Badge></td>
                   <td className="px-5 py-4 font-bold text-[#047068]">{formatCurrency(days * rental.price_per_day)}</td>
                   <td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(rental)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(rental)}>Delete</Button></div></td>
@@ -1014,7 +1111,7 @@ export function RentalsAdmin() {
           </table>
         </TableShell>
       ) : <EmptyState text={loading ? "Loading rentals from Supabase..." : "No rentals in Supabase yet."} />}
-      <Modal open={Boolean(draft)} title="Rental Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><label className="text-sm font-bold text-slate-700">Price per day<Input type="number" value={draft.price_per_day} onChange={(event) => setDraft({ ...draft, price_per_day: Number(event.target.value) })} /></label><label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.availability} onChange={(event) => setDraft({ ...draft, availability: event.target.checked })} /> Available</label><label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label className="text-sm font-bold text-slate-700 md:col-span-2">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-24 w-32 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Rental preview" fill className="object-cover" /></div> : null}<div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveRental} disabled={loading}>{loading ? "Saving..." : "Save Rental"}</Button></div></div> : null}</Modal>
+      <Modal open={Boolean(draft)} title="Rental Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><label className="text-sm font-bold text-slate-700">Category<select value={isDefaultRentalCategory(draft.category) ? draft.category : "__new"} onChange={(event) => setDraft({ ...draft, category: event.target.value === "__new" ? "" : event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{defaultCategoryOptions.map((option) => <option key={option.slug} value={option.name}>{option.name}</option>)}<option value="__new">+ Add new category</option></select></label>{!isDefaultRentalCategory(draft.category) ? <label className="text-sm font-bold text-slate-700">New category<Input value={draft.category ?? ""} onChange={(event) => setDraft({ ...draft, category: event.target.value })} placeholder="Example: ICU Bed Rentals" /></label> : null}<label className="text-sm font-bold text-slate-700">Price per day<Input type="number" value={draft.price_per_day} onChange={(event) => setDraft({ ...draft, price_per_day: Number(event.target.value) })} /></label><label className="text-sm font-bold text-slate-700">Price per week<Input type="number" value={draft.price_per_week ?? 0} onChange={(event) => setDraft({ ...draft, price_per_week: Number(event.target.value) })} /></label><label className="text-sm font-bold text-slate-700">Price per month<Input type="number" value={draft.price_per_month ?? 0} onChange={(event) => setDraft({ ...draft, price_per_month: Number(event.target.value) })} /></label><label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.availability} onChange={(event) => setDraft({ ...draft, availability: event.target.checked })} /> Available</label><label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label className="text-sm font-bold text-slate-700 md:col-span-2">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-24 w-32 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Rental preview" fill className="object-contain p-2" /></div> : null}<div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveRental} disabled={loading}>{loading ? "Saving..." : "Save Rental"}</Button></div></div> : null}</Modal>
       <ConfirmModal open={Boolean(deleting)} title="Delete rental?" message={`Delete ${deleting?.name ?? "this rental"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteRental} />
     </div>
   );

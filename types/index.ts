@@ -5,6 +5,11 @@ export type ProductCategory =
   | "Digital Monitoring"
   | "Orthopedic";
 
+export type ProductMedia = {
+  type: "image" | "video";
+  url: string;
+};
+
 export type CommerceProduct = {
   id: string;
   name: string;
@@ -13,6 +18,8 @@ export type CommerceProduct = {
   stock: boolean;
   image: string;
   images?: string[];
+  videos?: string[];
+  media?: ProductMedia[];
   description?: string;
   features?: string[];
   brand?: string;
@@ -38,6 +45,9 @@ export type Product = {
   price: number;
   category: ProductCategory;
   images: string[];
+  videos?: string[];
+  media?: ProductMedia[];
+  detailHref?: string;
   stock: number;
   discount: number;
   isRental: boolean;
@@ -67,7 +77,10 @@ export type Order = {
 export type Rental = {
   product_id: string;
   price_per_day: number;
+  price_per_week?: number;
+  price_per_month?: number;
   availability: boolean;
+  category?: string;
 };
 
 export type Blog = {

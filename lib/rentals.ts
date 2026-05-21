@@ -5,7 +5,10 @@ type RentalRow = {
   id: string;
   product_id: string | null;
   name: string;
+  category?: string | null;
   price_per_day: number | string;
+  price_per_week?: number | string | null;
+  price_per_month?: number | string | null;
   availability: boolean;
   description: string | null;
   image_url: string | null;
@@ -35,7 +38,7 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
     id: row.product_id ?? row.id,
     name: productRow?.name ?? row.name,
     price: productRow ? Number(productRow.price) : Number(row.price_per_day),
-    category: (productRow?.category ?? "Mobility") as ProductCategory,
+    category: (productRow?.category ?? row.category ?? "Mobility") as ProductCategory,
     images: images.length ? images : [row.image_url ?? defaultImage],
     stock: productRow?.stock ?? (row.availability ? 1 : 0),
     discount: productRow ? Number(productRow.discount) : 0,
@@ -50,7 +53,10 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
     rental: {
       product_id: product.id,
       price_per_day: Number(row.price_per_day),
+      price_per_week: row.price_per_week ? Number(row.price_per_week) : undefined,
+      price_per_month: row.price_per_month ? Number(row.price_per_month) : undefined,
       availability: row.availability,
+      category: (productRow?.category ?? row.category ?? "Mobility") as ProductCategory,
     },
   };
 }
@@ -60,7 +66,7 @@ export async function getActiveRentals() {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("rentals")
-      .select("id, product_id, name, price_per_day, availability, description, image_url, products(id, name, category, price, discount, stock, description, brand, features, product_images(image_url, sort_order))")
+      .select("*, products(id, name, category, price, discount, stock, description, brand, features, product_images(*))")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
 

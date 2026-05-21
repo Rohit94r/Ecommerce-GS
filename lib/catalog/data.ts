@@ -1,7 +1,8 @@
 import { categories as defaultCategories } from "@/lib/dummyData";
+import { isVideoMediaUrl } from "@/lib/catalog";
 import { slugify } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/server";
-import type { CommerceCategory, CommerceProduct, CommerceSubcategory } from "@/types";
+import type { CommerceCategory, CommerceProduct, CommerceSubcategory, ProductMedia } from "@/types";
 
 type CategoryRow = {
   id: string;
@@ -27,6 +28,7 @@ type SubcategoryRow = {
 type ProductImageRow = {
   image_url: string;
   sort_order: number | null;
+  media_type?: string | null;
 };
 
 type ProductRow = {
@@ -57,7 +59,9 @@ function cloneDefaultCategories(): CommerceCategory[] {
 }
 
 function mapProduct(row: ProductRow): CommerceProduct {
-  const images = row.product_images?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((image) => image.image_url) ?? [];
+  const media = toProductMedia(row.product_images ?? []);
+  const images = media.filter((item) => item.type === "image").map((item) => item.url);
+  const videos = media.filter((item) => item.type === "video").map((item) => item.url);
 
   return {
     id: row.id,
@@ -67,6 +71,8 @@ function mapProduct(row: ProductRow): CommerceProduct {
     stock: row.stock > 0,
     image: images[0] ?? defaultProductImage,
     images: images.length ? images : [defaultProductImage],
+    videos,
+    media: media.length ? media : [{ type: "image", url: defaultProductImage }],
     description: row.description ?? "",
     features: row.features ?? [],
     brand: row.brand ?? "Gargi Care",
@@ -98,7 +104,7 @@ export async function getCatalogCategories(): Promise<CommerceCategory[]> {
         .eq("is_active", true),
       supabase
         .from("products")
-        .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(image_url, sort_order)")
+        .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(*)")
         .eq("is_active", true),
     ]);
 
@@ -171,4 +177,15 @@ export async function getCatalogProduct(categorySlug: string, subcategorySlug: s
   const result = await getCatalogSubcategory(categorySlug, subcategorySlug);
   const product = result?.subcategory.products.find((item) => item.id === id);
   return result && product ? { ...result, product } : null;
+}
+
+function toProductMedia(rows: ProductImageRow[]): ProductMedia[] {
+  return rows
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((row) => ({
+      type: isVideoMediaUrl(row.image_url, row.media_type) ? ("video" as const) : ("image" as const),
+      url: row.image_url,
+    }))
+    .sort((a, b) => Number(a.type === "video") - Number(b.type === "video"));
 }

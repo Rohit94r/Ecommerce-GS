@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/Badge";
 import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcrumbs";
 import { CommerceProductActions } from "@/components/product/catalog/CommerceProductActions";
+import { ProductMediaGallery } from "@/components/product/catalog/ProductMediaGallery";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductImages } from "@/lib/catalog";
+import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductMedia } from "@/lib/catalog";
 import { getCatalogProduct } from "@/lib/catalog/data";
 import { formatCurrency } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
 
   const { category, subcategory, product } = result;
   const discountedPrice = Math.round(product.price - (product.price * product.discount) / 100);
-  const images = getCommerceProductImages(product);
+  const media = getCommerceProductMedia(product);
 
   return (
     <SiteShell>
@@ -46,28 +46,10 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
           ]}
         />
 
-        <div className="mt-9 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-          <div className="grid gap-4">
-            <div className="group relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100 shadow-sm">
-              <Image
-                src={images[0]}
-                alt={product.name}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 52vw"
-                className="object-cover transition duration-500 ease-out group-hover:scale-105"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {images.map((image, index) => (
-                <div key={image} className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100">
-                  <Image src={image} alt={`${product.name} gallery ${index + 1}`} fill sizes="25vw" className="object-cover transition duration-500 ease-out hover:scale-105" />
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="mt-9 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
+          <ProductMediaGallery media={media} productName={product.name} />
 
-          <div className="rounded-lg border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5">
+          <div className="rounded-lg border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5 lg:sticky lg:top-28">
             <div className="flex flex-wrap gap-2">
               <Badge tone={product.stock ? "green" : "red"}>{product.stock ? "In Stock" : "Out of Stock"}</Badge>
               {product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}
@@ -95,6 +77,31 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
 
             <CommerceProductActions category={category} subcategory={subcategory} product={product} />
           </div>
+        </div>
+
+        <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_360px]">
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black text-slate-950">Product information</h2>
+            <p className="mt-4 leading-8 text-slate-600">{getCommerceProductDescription(product)}</p>
+            <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg bg-slate-50 p-4">
+                <dt className="text-sm font-black text-slate-500">Brand</dt>
+                <dd className="mt-1 font-bold text-slate-950">{product.brand || "Gargi Care"}</dd>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-4">
+                <dt className="text-sm font-black text-slate-500">Category</dt>
+                <dd className="mt-1 font-bold text-slate-950">{category.name} / {subcategory.name}</dd>
+              </div>
+            </dl>
+          </section>
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-black text-slate-950">Delivery support</h2>
+            <ul className="mt-4 grid gap-3 text-sm font-semibold leading-6 text-slate-600">
+              <li>Same Day / Next Day Delivery Available</li>
+              <li>Availability confirmed before dispatch</li>
+              <li>Phone support for product guidance</li>
+            </ul>
+          </section>
         </div>
       </section>
     </SiteShell>

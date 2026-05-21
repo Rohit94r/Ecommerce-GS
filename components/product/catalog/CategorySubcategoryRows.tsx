@@ -18,13 +18,13 @@ function CompactProductCard({
 
   return (
     <Link href={`/products/${category.slug}/${subcategory.slug}/${product.id}`} className="group block min-w-0">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-2 shadow-sm">
         <Image
           src={images[0]}
           alt={product.name}
           fill
           sizes="(max-width: 640px) 46vw, (max-width: 1024px) 24vw, 190px"
-          className="object-cover transition duration-300 ease-out group-hover:scale-105"
+          className="object-contain p-2 transition duration-300 ease-out group-hover:scale-105"
         />
         {!product.stock ? (
           <span className="absolute left-2 top-2 rounded-full bg-red-600 px-2 py-1 text-[11px] font-black text-white">

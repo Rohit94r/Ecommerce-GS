@@ -60,6 +60,7 @@ create table if not exists public.product_images (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.products(id) on delete cascade,
   image_url text not null,
+  media_type text not null default 'image' check (media_type in ('image', 'video')),
   alt_text text not null default '',
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
@@ -70,7 +71,10 @@ create table if not exists public.rentals (
   product_id uuid references public.products(id) on delete set null,
   name text not null,
   slug text not null unique,
+  category text not null default 'Mobility',
   price_per_day numeric(14, 2) not null check (price_per_day >= 0),
+  price_per_week numeric(14, 2),
+  price_per_month numeric(14, 2),
   availability boolean not null default true,
   description text not null default '',
   image_url text,
@@ -146,6 +150,14 @@ alter table public.products
   add column if not exists show_on_homepage boolean not null default false,
   add column if not exists is_special_offer boolean not null default false,
   add column if not exists subcategory_id uuid references public.subcategories(id) on delete set null;
+
+alter table public.product_images
+  add column if not exists media_type text not null default 'image';
+
+alter table public.rentals
+  add column if not exists category text not null default 'Mobility',
+  add column if not exists price_per_week numeric(14, 2),
+  add column if not exists price_per_month numeric(14, 2);
 
 alter table public.products
   alter column price type numeric(14, 2),
