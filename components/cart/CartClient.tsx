@@ -27,8 +27,8 @@ export function CartClient() {
       <section className="space-y-4">
         {items.map((item) => (
           <article key={item.product.id} className="grid gap-4 rounded-md border border-[#047068]/15 bg-white p-4 shadow-sm sm:grid-cols-[120px_1fr_auto]">
-            <div className="relative aspect-square overflow-hidden rounded-md bg-slate-50 p-2">
-              <Image src={item.product.images[0]} alt={item.product.name} fill sizes="120px" className="object-contain p-2" />
+            <div className="relative aspect-square overflow-hidden rounded-md bg-slate-100">
+              <Image src={item.product.images[0]} alt={item.product.name} fill sizes="120px" className="scale-[1.08] object-cover" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-950">{item.product.name}</h2>

@@ -18,8 +18,8 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className={`group overflow-hidden rounded-xl border bg-white shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10 ${cartQuantity > 0 ? "border-[#047068] ring-2 ring-[#047068]/15" : "border-slate-200/80"}`}>
       <Link href={href} className="block">
-        <div className="relative aspect-[4/3] overflow-hidden bg-slate-50 p-3">
-          <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-contain p-3 transition duration-500 ease-out group-hover:scale-105" />
+        <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+          <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="scale-[1.08] object-cover transition duration-500 ease-out group-hover:scale-[1.12]" />
           <div className="absolute left-3 top-3 flex gap-2">
             {product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}
             {product.stock <= 0 ? <Badge tone="red">Out of Stock</Badge> : <Badge>In Stock</Badge>}

@@ -34,10 +34,10 @@ export function HomeProductScroller({ products }: { products: Product[] }) {
           const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
 
           return (
-            <article key={`${product.id}-${index}`} className="w-[78vw] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10 sm:w-[330px] lg:w-[calc((1280px-32px)/3)]">
+            <article key={`${product.id}-${index}`} className="group w-[78vw] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10 sm:w-[330px] lg:w-[calc((1280px-32px)/3)]">
               <Link href={product.detailHref ?? "/products"} className="block">
-                <div className="relative aspect-[4/3] bg-slate-50 p-3">
-                  <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 640px) 78vw, 400px" className="object-contain p-3" />
+                <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                  <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 640px) 78vw, 400px" className="scale-[1.08] object-cover transition duration-500 ease-out group-hover:scale-[1.12]" />
                   <div className="absolute left-3 top-3 flex flex-wrap gap-2">
                     {product.specialOffer ? <span className="rounded-full bg-[#047068] px-2.5 py-1 text-[11px] font-black text-white">Special Offer</span> : null}
                     {product.discount > 0 ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">{product.discount}% OFF</span> : null}
