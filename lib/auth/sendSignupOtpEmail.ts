@@ -24,9 +24,9 @@ export class SignupOtpEmailError extends Error {
 }
 
 export async function sendSignupOtpEmail({ to, otp }: SendSignupOtpEmailInput) {
-  const user = process.env.GMAIL_SMTP_USER || "gargisurgical58@gmail.com";
-  const pass = (process.env.GMAIL_SMTP_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, "");
-  const fromEmail = process.env.GMAIL_FROM_EMAIL || user;
+  const user = readEnvValue("GMAIL_SMTP_USER", "gargisurgical58@gmail.com");
+  const pass = readEnvValue("GMAIL_SMTP_APP_PASSWORD", readEnvValue("GMAIL_APP_PASSWORD", "")).replace(/\s+/g, "");
+  const fromEmail = readEnvValue("GMAIL_FROM_EMAIL", user);
 
   if (!pass) {
     throw new Error("Missing Gmail SMTP app password");
@@ -101,6 +101,12 @@ function toSignupOtpEmailError(errors: unknown[]) {
     "Gmail could not send the OTP from the hosted server. Check Vercel function logs for the SMTP error.",
     "SMTP_SEND_FAILED",
   );
+}
+
+function readEnvValue(name: string, fallback: string) {
+  const rawValue = process.env[name] ?? fallback;
+  const withoutKey = rawValue.startsWith(`${name}=`) ? rawValue.slice(name.length + 1) : rawValue;
+  return withoutKey.trim().replace(/^['"]|['"]$/g, "");
 }
 
 function describeMailError(error: unknown) {
