@@ -10,17 +10,10 @@ import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceP
 import { getCatalogProduct } from "@/lib/catalog/data";
 import { formatCurrency } from "@/lib/utils";
 
-export function generateStaticParams(): { category: string; subcategory: string; id: string }[] {
-  return [];
-}
-
-export async function generateMetadata({ params }: { params: Promise<{ category: string; subcategory: string; id: string }> }): Promise<Metadata> {
-  const { category, subcategory, id } = await params;
-  const result = await getCatalogProduct(category, subcategory, id);
-
+export function generateMetadata(): Metadata {
   return {
-    title: result ? result.product.name : "Product",
-    description: result ? getCommerceProductDescription(result.product) : "Medical product details.",
+    title: "Product Details",
+    description: "Medical product details, pricing, photos and delivery support from Gargi Surgical & Healthcare.",
   };
 }
 
