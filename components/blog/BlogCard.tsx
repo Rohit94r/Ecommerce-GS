@@ -3,11 +3,13 @@ import Link from "next/link";
 import type { Blog } from "@/types";
 
 export function BlogCard({ blog }: { blog: Blog }) {
+  const coverImage = blog.images?.[0] ?? blog.image;
+
   return (
     <article className="group overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10">
       <Link href={`/blog/${blog.slug}`}>
         <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-          <Image src={blog.image} alt={blog.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition duration-500 ease-out group-hover:scale-105" />
+          <Image src={coverImage} alt={blog.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition duration-500 ease-out group-hover:scale-105" />
         </div>
       </Link>
       <div className="p-5">

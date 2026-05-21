@@ -119,6 +119,15 @@ create table if not exists public.blogs (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.blog_images (
+  id uuid primary key default gen_random_uuid(),
+  blog_id uuid not null references public.blogs(id) on delete cascade,
+  image_url text not null,
+  alt_text text not null default '',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   name text not null default '',
@@ -193,6 +202,7 @@ create index if not exists idx_orders_status on public.orders(status);
 create index if not exists idx_orders_user_id on public.orders(user_id);
 create index if not exists idx_order_items_order_id on public.order_items(order_id);
 create index if not exists idx_blogs_slug on public.blogs(slug);
+create index if not exists idx_blog_images_blog_id on public.blog_images(blog_id);
 create index if not exists idx_profiles_email on public.profiles(email);
 create index if not exists idx_google_reviews_featured on public.google_reviews(is_featured);
 
@@ -334,6 +344,7 @@ alter table public.rentals enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.blogs enable row level security;
+alter table public.blog_images enable row level security;
 alter table public.profiles enable row level security;
 alter table public.google_reviews enable row level security;
 
@@ -366,6 +377,18 @@ drop policy if exists "Public can read published blogs" on public.blogs;
 create policy "Public can read published blogs"
 on public.blogs for select
 using (is_published = true);
+
+drop policy if exists "Public can read blog images" on public.blog_images;
+create policy "Public can read blog images"
+on public.blog_images for select
+using (
+  exists (
+    select 1
+    from public.blogs
+    where blogs.id = blog_images.blog_id
+      and blogs.is_published = true
+  )
+);
 
 drop policy if exists "Public can read featured google reviews" on public.google_reviews;
 create policy "Public can read featured google reviews"
@@ -417,6 +440,12 @@ with check (public.is_admin());
 drop policy if exists "Authenticated users can manage blogs" on public.blogs;
 create policy "Authenticated users can manage blogs"
 on public.blogs for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "Authenticated users can manage blog images" on public.blog_images;
+create policy "Authenticated users can manage blog images"
+on public.blog_images for all
 using (public.is_admin())
 with check (public.is_admin());
 

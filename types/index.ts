@@ -90,6 +90,7 @@ export type Blog = {
   excerpt: string;
   content: string;
   image: string;
+  images?: string[];
   created_at: string;
 };
 

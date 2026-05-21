@@ -79,6 +79,11 @@ type BlogRow = {
   content: string;
   image_url: string | null;
   created_at: string;
+  blog_images?: BlogImageRow[] | null;
+};
+type BlogImageRow = {
+  image_url: string;
+  sort_order: number | null;
 };
 type RentalRow = {
   id: string;
@@ -329,13 +334,21 @@ function mapOrder(row: OrderRow): Order {
 }
 
 function mapBlog(row: BlogRow): Blog {
+  const images = (row.blog_images ?? [])
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((image) => image.image_url)
+    .filter(Boolean);
+  const fallbackImage = row.image_url ?? defaultImage;
+
   return {
     id: row.id,
     title: row.title,
     slug: row.slug,
     excerpt: row.excerpt,
     content: row.content,
-    image: row.image_url ?? defaultImage,
+    image: images[0] ?? fallbackImage,
+    images: images.length ? images : [fallbackImage],
     created_at: row.created_at.slice(0, 10),
   };
 }
@@ -1166,7 +1179,17 @@ export function BlogsAdmin() {
 
   const loadBlogs = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("blogs").select("*").order("created_at", { ascending: false });
+    let { data, error } = await supabase
+      .from("blogs")
+      .select("*, blog_images(image_url, sort_order)")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      const fallback = await supabase.from("blogs").select("*").order("created_at", { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) show(cleanError(error), "error");
     else setItems(((data ?? []) as BlogRow[]).map(mapBlog));
     setLoading(false);
@@ -1182,14 +1205,46 @@ export function BlogsAdmin() {
   async function saveBlog() {
     if (!draft?.title.trim()) return show("Blog title is required", "error");
     setLoading(true);
-    const payload = { title: draft.title, slug: draft.slug || slugify(draft.title), excerpt: draft.excerpt, content: draft.content, image_url: draft.image, is_published: true, published_at: new Date().toISOString() };
-    const { error } = draft.id ? await supabase.from("blogs").update(payload).eq("id", draft.id) : await supabase.from("blogs").insert(payload);
-    if (error) show(cleanError(error), "error");
-    else {
-      setDraft(null);
-      show("Blog saved in Supabase");
-      await loadBlogs();
+    const images = draft.images?.length ? draft.images : [draft.image || defaultImage];
+    const payload = {
+      title: draft.title,
+      slug: draft.slug || slugify(draft.title),
+      excerpt: draft.excerpt,
+      content: draft.content,
+      image_url: images[0] ?? defaultImage,
+      is_published: true,
+      published_at: new Date().toISOString(),
+    };
+    const result = draft.id
+      ? await supabase.from("blogs").update(payload).eq("id", draft.id).select("id").single()
+      : await supabase.from("blogs").insert(payload).select("id").single();
+
+    if (result.error) {
+      show(cleanError(result.error), "error");
+      setLoading(false);
+      return;
     }
+
+    const blogId = String(result.data.id);
+    let savedGallery = true;
+    const deleteImages = await supabase.from("blog_images").delete().eq("blog_id", blogId);
+
+    if (deleteImages.error) {
+      savedGallery = false;
+    } else {
+      const imageRows = images.map((image, index) => ({
+        blog_id: blogId,
+        image_url: image,
+        alt_text: draft.title,
+        sort_order: index,
+      }));
+      const insertImages = await supabase.from("blog_images").insert(imageRows);
+      savedGallery = !insertImages.error;
+    }
+
+    setDraft(null);
+    show(savedGallery ? "Blog saved in Supabase" : "Blog saved. Run latest Supabase schema to enable multiple blog photos.", savedGallery ? "success" : "error");
+    await loadBlogs();
     setLoading(false);
   }
 
@@ -1207,9 +1262,90 @@ export function BlogsAdmin() {
   return (
     <div>
       <ToastView toast={toast} />
-      <SectionHeader title="Blogs" description="Live Supabase educational content for customers." action={<Button onClick={() => setDraft({ id: "", title: "", slug: "", excerpt: "", content: "", image: defaultImage, created_at: new Date().toISOString().slice(0, 10) })}>Add Blog</Button>} />
-      {items.length ? <TableShell><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Title", "Date", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{items.map((blog) => <tr key={blog.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-bold text-slate-900">{blog.title}</td><td className="px-5 py-4">{blog.created_at}</td><td className="px-5 py-4"><div className="flex gap-2"><Button variant="secondary" onClick={() => setDraft(blog)}>Edit</Button><Button variant="danger" onClick={() => setDeleting(blog)}>Delete</Button></div></td></tr>)}</tbody></table></TableShell> : <EmptyState text={loading ? "Loading blogs from Supabase..." : "No blogs in Supabase yet."} />}
-      <Modal open={Boolean(draft)} title="Blog Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4"><label className="text-sm font-bold text-slate-700">Title<Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value, slug: slugify(event.target.value) })} /></label><div><p className="text-sm font-bold text-slate-700">Content</p><div contentEditable suppressContentEditableWarning onInput={(event) => setDraft({ ...draft, content: event.currentTarget.innerHTML })} className="mt-1 min-h-40 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm leading-6 outline-none focus:border-[#047068] focus:ring-4 focus:ring-[#047068]/10" dangerouslySetInnerHTML={{ __html: draft.content }} /></div><label className="text-sm font-bold text-slate-700">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-28 w-44 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Blog preview" fill className="object-cover" /></div> : null}<div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveBlog} disabled={loading}>{loading ? "Saving..." : "Save Blog"}</Button></div></div> : null}</Modal>
+      <SectionHeader title="Blogs" description="Live Supabase educational content with ordered photo galleries." action={<Button onClick={() => setDraft({ id: "", title: "", slug: "", excerpt: "", content: "", image: defaultImage, images: [], created_at: new Date().toISOString().slice(0, 10) })}>Add Blog</Button>} />
+      {items.length ? (
+        <TableShell>
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
+              <tr>{["Title", "Photos", "Date", "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((blog) => (
+                <tr key={blog.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-12 w-16 overflow-hidden rounded-md bg-slate-100">
+                        <Image src={blog.images?.[0] ?? blog.image} alt={blog.title} fill unoptimized={(blog.images?.[0] ?? blog.image).startsWith("data:")} className="object-cover" />
+                      </div>
+                      <span className="font-bold text-slate-900">{blog.title}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 font-bold text-slate-600">{blog.images?.length ?? 1}</td>
+                  <td className="px-5 py-4">{blog.created_at}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex gap-2">
+                      <Button variant="secondary" onClick={() => setDraft({ ...blog, images: blog.images ?? [blog.image] })}>Edit</Button>
+                      <Button variant="danger" onClick={() => setDeleting(blog)}>Delete</Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableShell>
+      ) : <EmptyState text={loading ? "Loading blogs from Supabase..." : "No blogs in Supabase yet."} />}
+      <Modal open={Boolean(draft)} title="Blog Form" onClose={() => setDraft(null)}>
+        {draft ? (
+          <div className="grid gap-4">
+            <label className="text-sm font-bold text-slate-700">
+              Title
+              <Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value, slug: slugify(event.target.value) })} />
+            </label>
+            <label className="text-sm font-bold text-slate-700">
+              Short Description
+              <Textarea value={draft.excerpt} onChange={(event) => setDraft({ ...draft, excerpt: event.target.value })} className="min-h-24" />
+            </label>
+            <label className="text-sm font-bold text-slate-700">
+              Full Blog Content
+              <Textarea value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} className="min-h-56" />
+            </label>
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
+              <div>
+                <p className="text-sm font-black text-slate-800">Blog Photos</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">First photo is primary. Use Up and Down to arrange priority.</p>
+              </div>
+              <label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-[#047068]/20 bg-white px-4 text-sm font-black text-[#047068] shadow-sm transition hover:bg-[#eef8f6]">
+                + Add photos
+                <Input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => readFiles(event.target.files, (images) => setDraft({ ...draft, images: [...(draft.images ?? []), ...images], image: draft.images?.[0] ?? images[0] ?? draft.image }))} />
+              </label>
+              {draft.images?.length ? (
+                <div className="grid gap-3">
+                  {draft.images.map((image, index) => (
+                    <div key={`${image}-${index}`} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[96px_1fr_auto] sm:items-center">
+                      <div className="relative h-20 w-24 overflow-hidden rounded-md bg-white">
+                        <Image src={image} alt={`Blog preview ${index + 1}`} fill unoptimized={image.startsWith("data:")} className="object-cover" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-700">Photo {index + 1}{index === 0 ? " · Primary" : ""}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="ghost" onClick={() => setDraft({ ...draft, images: moveItem(draft.images ?? [], index, -1) })}>Up</Button>
+                        <Button type="button" variant="ghost" onClick={() => setDraft({ ...draft, images: moveItem(draft.images ?? [], index, 1) })}>Down</Button>
+                        <Button type="button" variant="danger" onClick={() => {
+                          const nextImages = (draft.images ?? []).filter((_, itemIndex) => itemIndex !== index);
+                          setDraft({ ...draft, images: nextImages, image: nextImages[0] ?? defaultImage });
+                        }}>Remove</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button>
+              <Button onClick={saveBlog} disabled={loading}>{loading ? "Saving..." : "Save Blog"}</Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
       <ConfirmModal open={Boolean(deleting)} title="Delete blog?" message={`Delete ${deleting?.title ?? "this blog"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteBlog} />
     </div>
   );
