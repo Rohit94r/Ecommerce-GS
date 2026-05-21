@@ -24,6 +24,13 @@ export const metadata: Metadata = {
   description:
     "Hospital equipment, wheelchair on rent Mumbai services, oxygen cylinder Mumbai support, wellness and orthocare products.",
   keywords: ["Medical equipment Mumbai", "Wheelchair on rent Mumbai", "Oxygen cylinder Mumbai"],
+  icons: {
+    icon: [
+      { url: "/icon.svg?v=gs-20260521", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=gs-20260521", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico?v=gs-20260521",
+  },
   openGraph: {
     title: "Gargi Surgical & Healthcare",
     description: "Trusted medical equipment, rentals and healthcare products in Mumbai.",
