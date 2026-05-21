@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { business } from "@/lib/dummyData";
@@ -20,8 +20,10 @@ const links = [
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const { count } = useCart();
   const supabase = useMemo(() => createClient(), []);
   const isAdmin = isAdminEmail(userEmail);
@@ -30,11 +32,15 @@ export function Header() {
     let mounted = true;
 
     supabase.auth.getUser().then(({ data }) => {
-      if (mounted) setUserEmail(data.user?.email ?? null);
+      if (mounted) {
+        setUserEmail(data.user?.email ?? null);
+        setAuthReady(true);
+      }
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserEmail(session?.user.email ?? null);
+      setAuthReady(true);
     });
 
     return () => {
@@ -46,7 +52,12 @@ export function Header() {
   async function logout() {
     await supabase.auth.signOut();
     setUserEmail(null);
+    setAuthReady(true);
     setOpen(false);
+    if (pathname.startsWith("/account") || pathname.startsWith("/dashboard")) {
+      router.replace("/login");
+    }
+    router.refresh();
   }
 
   return (
@@ -75,19 +86,19 @@ export function Header() {
           <Link href="/cart" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
             Cart ({count})
           </Link>
-          {userEmail ? (
+          {authReady && userEmail ? (
             <Link href="/account" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
               Account
             </Link>
-          ) : (
+          ) : authReady ? (
             <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
               Login
             </Link>
-          )}
+          ) : null}
         </nav>
         <div className="hidden items-center gap-2 lg:flex">
-          {isAdmin ? <LinkButton href="/dashboard" variant="secondary">Dashboard</LinkButton> : null}
-          {userEmail ? (
+          {authReady && isAdmin ? <LinkButton href="/dashboard" variant="secondary">Dashboard</LinkButton> : null}
+          {!authReady ? <span className="h-11 w-32" aria-hidden /> : userEmail ? (
             <Button onClick={logout} variant="secondary">Logout</Button>
           ) : (
             <LinkButton href="/signup" variant="secondary">Create Account</LinkButton>
@@ -119,7 +130,7 @@ export function Header() {
                 Purchase / Checkout
               </Link>
             ) : null}
-            {userEmail ? (
+            {authReady && userEmail ? (
               <>
                 <Link href="/account" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-slate-700">
                   Account
@@ -133,7 +144,7 @@ export function Header() {
                   Logout
                 </button>
               </>
-            ) : (
+            ) : authReady ? (
               <>
                 <Link href="/login" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 font-semibold text-slate-700">
                   Login
@@ -142,7 +153,7 @@ export function Header() {
                   Create Account
                 </Link>
               </>
-            )}
+            ) : null}
           </nav>
         </div>
       ) : null}

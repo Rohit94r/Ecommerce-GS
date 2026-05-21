@@ -38,7 +38,7 @@ export default async function AccountPage() {
             id: user.id,
             name: profile?.name || user.user_metadata?.name || user.user_metadata?.full_name || "",
             email: profile?.email || user.email || "",
-            phone: profile?.phone || "",
+            phone: profile?.phone || user.user_metadata?.phone || "",
             address: profile?.address || "",
           }}
         />
