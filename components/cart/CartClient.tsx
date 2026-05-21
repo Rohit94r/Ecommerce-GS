@@ -28,7 +28,7 @@ export function CartClient() {
         {items.map((item) => (
           <article key={item.product.id} className="grid gap-4 rounded-md border border-[#047068]/15 bg-white p-4 shadow-sm sm:grid-cols-[120px_1fr_auto]">
             <div className="relative aspect-square overflow-hidden rounded-md bg-slate-100">
-              <Image src={item.product.images[0]} alt={item.product.name} fill sizes="120px" className="scale-[1.08] object-cover" />
+              <Image src={item.product.images[0]} alt={item.product.name} fill sizes="120px" className="object-contain p-2" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-950">{item.product.name}</h2>

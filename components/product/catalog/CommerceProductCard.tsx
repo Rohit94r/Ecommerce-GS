@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { OutOfStockWatermark } from "@/components/product/catalog/OutOfStockWatermark";
 import { useCart } from "@/hooks/useCart";
 import { getCommerceProductImages, toCartProduct } from "@/lib/catalog";
 import { formatCurrency } from "@/lib/utils";
@@ -28,12 +29,13 @@ export function CommerceProductCard({
     <article className={`group overflow-hidden rounded-lg border bg-white shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:border-[#047068]/25 hover:shadow-xl hover:shadow-[#047068]/10 ${cartQuantity > 0 ? "border-[#047068] ring-2 ring-[#047068]/15" : "border-slate-200/80"}`}>
       <Link href={href} className="block">
         <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+          <OutOfStockWatermark show={!product.stock} />
           <Image
             src={getCommerceProductImages(product)[0]}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
-            className="scale-[1.08] object-cover transition duration-500 ease-out group-hover:scale-[1.12]"
+            className="object-contain p-3 transition duration-500 ease-out group-hover:scale-[1.03]"
           />
           <div className="absolute left-3 top-3 flex flex-wrap gap-2">
             {product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}

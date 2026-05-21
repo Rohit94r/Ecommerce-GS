@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
+import { normalizeProductOptions } from "@/lib/productOptions";
 import type { Product, ProductCategory, ProductMedia } from "@/types";
 import { createPublicClient } from "@/utils/supabase/public";
 
@@ -14,6 +15,7 @@ type HomeProductRow = {
   description: string | null;
   brand: string | null;
   features: string[] | null;
+  product_options?: unknown;
   is_rental: boolean | null;
   is_featured: boolean | null;
   show_on_homepage: boolean | null;
@@ -57,6 +59,7 @@ function toProduct(row: HomeProductRow): Product {
     description: row.description ?? "",
     features: row.features ?? [],
     brand: row.brand ?? "Gargi Care",
+    options: normalizeProductOptions(row.product_options),
     isRental: Boolean(row.is_rental),
     featured: Boolean(row.is_featured),
     showOnHomepage: Boolean(row.show_on_homepage),
@@ -69,7 +72,7 @@ async function fetchHomepageProducts() {
     const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_rental, is_featured, show_on_homepage, is_special_offer, subcategories(slug, categories(slug)), product_images(sort_order, media_type)")
+      .select("*, subcategories(slug, categories(slug)), product_images(sort_order, media_type)")
       .eq("is_active", true)
       .eq("show_on_homepage", true)
       .order("is_special_offer", { ascending: false })

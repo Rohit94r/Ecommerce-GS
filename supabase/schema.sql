@@ -47,6 +47,7 @@ create table if not exists public.products (
   description text not null default '',
   brand text not null default '',
   features text[] not null default '{}',
+  product_options jsonb not null default '[]'::jsonb,
   is_featured boolean not null default false,
   show_on_homepage boolean not null default false,
   is_special_offer boolean not null default false,
@@ -158,7 +159,8 @@ alter table public.orders
 alter table public.products
   add column if not exists show_on_homepage boolean not null default false,
   add column if not exists is_special_offer boolean not null default false,
-  add column if not exists subcategory_id uuid references public.subcategories(id) on delete set null;
+  add column if not exists subcategory_id uuid references public.subcategories(id) on delete set null,
+  add column if not exists product_options jsonb not null default '[]'::jsonb;
 
 alter table public.product_images
   add column if not exists media_type text not null default 'image';

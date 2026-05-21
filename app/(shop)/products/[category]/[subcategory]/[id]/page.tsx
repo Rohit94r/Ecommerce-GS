@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcrumbs";
 import { CommerceProductActions } from "@/components/product/catalog/CommerceProductActions";
 import { ProductMediaGallery } from "@/components/product/catalog/ProductMediaGallery";
+import { ProductOptionGroups } from "@/components/product/catalog/ProductOptionGroups";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductMedia, toCartProduct } from "@/lib/catalog";
 import { getCatalogProduct } from "@/lib/catalog/data";
@@ -41,7 +42,7 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
         />
 
         <div className="mt-9 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
-          <ProductMediaGallery media={media} productName={product.name} />
+          <ProductMediaGallery media={media} productName={product.name} inStock={product.stock} />
 
           <div className="rounded-lg border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5 lg:sticky lg:top-28">
             <div className="flex flex-wrap gap-2">
@@ -60,6 +61,8 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
             <div className="mt-7 rounded-lg bg-[#047068]/10 px-4 py-3 text-sm font-black text-[#047068]">
               Same Day / Next Day Delivery Available
             </div>
+
+            <ProductOptionGroups groups={product.options} />
 
             <ul className="mt-7 grid gap-3">
               {getCommerceProductFeatures(product).map((feature) => (

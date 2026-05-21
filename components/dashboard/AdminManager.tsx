@@ -9,7 +9,8 @@ import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/utils/supabase/client";
 import { cn, formatCurrency, slugify } from "@/lib/utils";
 import { categories as catalogCategories } from "@/lib/dummyData";
-import type { Blog, GoogleReview, Order, Product, ProductCategory, ProductMedia, Rental } from "@/types";
+import { normalizeProductOptions, PRODUCT_OPTION_PRESETS } from "@/lib/productOptions";
+import type { Blog, GoogleReview, Order, Product, ProductCategory, ProductMedia, ProductOptionGroup, Rental } from "@/types";
 
 type Toast = { message: string; tone: "success" | "error" };
 type SortDirection = "asc" | "desc";
@@ -32,6 +33,7 @@ type ProductRow = {
   description: string;
   brand: string | null;
   features: string[] | null;
+  product_options?: unknown;
   is_featured: boolean;
   show_on_homepage: boolean | null;
   is_special_offer: boolean | null;
@@ -140,6 +142,7 @@ type DraftProduct = {
   videos: string[];
   videoUrl: string;
   description: string;
+  optionGroups: ProductOptionGroup[];
   featured?: boolean;
   showOnHomepage?: boolean;
   specialOffer?: boolean;
@@ -279,6 +282,7 @@ function mapProduct(row: ProductRow): AdminProduct {
     description: row.description,
     features: row.features ?? [],
     brand: row.brand ?? "Gargi Care",
+    options: normalizeProductOptions(row.product_options),
     featured: row.is_featured,
     showOnHomepage: Boolean(row.show_on_homepage),
     specialOffer: Boolean(row.is_special_offer),
@@ -692,6 +696,24 @@ export function ProductsAdmin() {
     });
   }
 
+  function addOptionGroup(group: ProductOptionGroup = { name: "Custom Option", values: [{ label: "", available: true }] }) {
+    if (!draft) return;
+    setDraft({ ...draft, optionGroups: [...draft.optionGroups, group] });
+  }
+
+  function updateOptionGroup(groupIndex: number, nextGroup: ProductOptionGroup) {
+    if (!draft) return;
+    setDraft({
+      ...draft,
+      optionGroups: draft.optionGroups.map((group, index) => (index === groupIndex ? nextGroup : group)),
+    });
+  }
+
+  function removeOptionGroup(groupIndex: number) {
+    if (!draft) return;
+    setDraft({ ...draft, optionGroups: draft.optionGroups.filter((_, index) => index !== groupIndex) });
+  }
+
   function openAdd() {
     const firstCategory = catalogOptions[0] ?? defaultCategoryOptions[0];
     const firstSubcategory = firstSubcategoryFor(firstCategory);
@@ -710,6 +732,7 @@ export function ProductsAdmin() {
       videos: [],
       videoUrl: "",
       description: "",
+      optionGroups: [],
       featured: false,
       showOnHomepage: false,
       specialOffer: false,
@@ -736,6 +759,7 @@ export function ProductsAdmin() {
       videos: product.videos ?? [],
       videoUrl: "",
       description: product.description,
+      optionGroups: normalizeProductOptions(product.options),
       featured: product.featured,
       showOnHomepage: product.showOnHomepage,
       specialOffer: product.specialOffer,
@@ -813,15 +837,41 @@ export function ProductsAdmin() {
       description: draft.description,
       brand: "Gargi Care",
       features: ["Admin managed product"],
+      product_options: normalizeProductOptions(draft.optionGroups),
       is_featured: Boolean(draft.featured),
       show_on_homepage: Boolean(draft.active && draft.showOnHomepage),
       is_special_offer: Boolean(draft.specialOffer),
       is_rental: false,
       is_active: draft.active !== false,
     };
-    const result = draft.id
+    let savedWithoutProductOptions = false;
+    let result = draft.id
       ? await supabase.from("products").update(payload).eq("id", draft.id).select("id").single()
       : await supabase.from("products").insert(payload).select("id").single();
+
+    if (result.error && cleanError(result.error).toLowerCase().includes("product_options")) {
+      const legacyPayload: Omit<typeof payload, "product_options"> = {
+        name: payload.name,
+        slug: payload.slug,
+        category: payload.category,
+        subcategory_id: payload.subcategory_id,
+        price: payload.price,
+        discount: payload.discount,
+        stock: payload.stock,
+        description: payload.description,
+        brand: payload.brand,
+        features: payload.features,
+        is_featured: payload.is_featured,
+        show_on_homepage: payload.show_on_homepage,
+        is_special_offer: payload.is_special_offer,
+        is_rental: payload.is_rental,
+        is_active: payload.is_active,
+      };
+      result = draft.id
+        ? await supabase.from("products").update(legacyPayload).eq("id", draft.id).select("id").single()
+        : await supabase.from("products").insert(legacyPayload).select("id").single();
+      savedWithoutProductOptions = !result.error;
+    }
 
     if (result.error) {
       setLoading(false);
@@ -847,7 +897,7 @@ export function ProductsAdmin() {
       })));
     }
     if (imageResult.error) show(cleanError(imageResult.error), "error");
-    else show("Product saved in Supabase");
+    else show(savedWithoutProductOptions ? "Product saved. Run the latest Supabase schema to save size and dimension options." : "Product saved in Supabase", savedWithoutProductOptions ? "error" : "success");
     setDraft(null);
     await loadCategoryOptions();
     await loadProducts();
@@ -873,7 +923,7 @@ export function ProductsAdmin() {
     const { error } = await supabase.from("products").update(payload).eq("id", product.id);
     if (error) show(cleanError(error), "error");
     else {
-      show(field === "show_on_homepage" ? "Homepage visibility updated" : field === "is_special_offer" ? "Special offer updated" : "Inventory availability updated");
+      show(field === "show_on_homepage" ? "Homepage visibility updated" : field === "is_special_offer" ? "Special offer updated" : "Product visibility updated");
       setActionMenu(null);
       await loadProducts();
     }
@@ -919,14 +969,28 @@ export function ProductsAdmin() {
             <tbody className="divide-y divide-slate-100">
               {filtered.map((product) => (
                 <tr key={product.id} className={cn("hover:bg-slate-50", product.active === false && "bg-slate-50/70 opacity-75")}>
-                  <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="relative h-12 w-12 overflow-hidden rounded-md bg-slate-100"><Image src={product.images[0] ?? defaultImage} alt={product.name} fill className="object-cover" /></div><span className="font-bold text-slate-900">{product.name}</span></div></td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-12 w-12 overflow-hidden rounded-md bg-slate-100">
+                        <Image src={product.images[0] ?? defaultImage} alt={product.name} fill className="object-contain p-1" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900">{product.name}</span>
+                        {product.options?.length ? (
+                          <span className="mt-1 block text-xs font-semibold text-slate-500">
+                            Options: {product.options.map((group) => group.name).join(", ")}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-5 py-4">
                     <span className="block font-bold text-slate-800">{product.category}</span>
                     <span className="mt-1 block text-xs font-semibold text-slate-500">{product.subcategoryName ?? "No subcategory selected"}</span>
                   </td>
                   <td className="px-5 py-4">{formatCurrency(product.price)}</td>
                   <td className="px-5 py-4"><Badge tone={product.stock > 0 ? "green" : "red"}>{product.stock}</Badge></td>
-                  <td className="px-5 py-4"><div className="flex flex-wrap gap-2">{product.active === false ? <Badge tone="red">Unavailable</Badge> : null}{product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}{product.featured ? <Badge tone="amber">Featured</Badge> : null}{product.showOnHomepage ? <Badge tone="green">Homepage</Badge> : null}{product.specialOffer ? <Badge tone="green">Special Offer</Badge> : null}</div></td>
+                  <td className="px-5 py-4"><div className="flex flex-wrap gap-2">{product.active === false ? <Badge tone="red">Hidden</Badge> : null}{product.discount > 0 ? <Badge tone="amber">{product.discount}% OFF</Badge> : null}{product.featured ? <Badge tone="amber">Featured</Badge> : null}{product.showOnHomepage ? <Badge tone="green">Homepage</Badge> : null}{product.specialOffer ? <Badge tone="green">Special Offer</Badge> : null}</div></td>
                   <td className="px-5 py-4">
                     <button
                       type="button"
@@ -960,14 +1024,97 @@ export function ProductsAdmin() {
             ) : null}
             <label className="text-sm font-bold text-slate-700">Price<Input type="number" min={1} step={0.01} value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
             <label className="text-sm font-bold text-slate-700">Discount<Input type="number" min={0} max={100} step={0.01} value={draft.discount} onChange={(event) => setDraft({ ...draft, discount: Number(event.target.value) })} /></label>
-            <label className="text-sm font-bold text-slate-700">Stock<Input type="number" min={0} step={1} value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
+            <label className="text-sm font-bold text-slate-700">Stock<Input type="number" min={0} step={1} value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /><span className="mt-1 block text-xs font-semibold text-slate-500">Set 0 to keep product visible with an out-of-stock watermark.</span></label>
             <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:col-span-2 md:grid-cols-4">
-              <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.active !== false} onChange={(event) => setDraft({ ...draft, active: event.target.checked, showOnHomepage: event.target.checked ? draft.showOnHomepage : false })} /> Available in inventory</label>
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.active !== false} onChange={(event) => setDraft({ ...draft, active: event.target.checked, showOnHomepage: event.target.checked ? draft.showOnHomepage : false })} /> Publish product</label>
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.showOnHomepage)} onChange={(event) => setDraft({ ...draft, showOnHomepage: event.target.checked })} /> Show on Homepage</label>
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.specialOffer)} onChange={(event) => setDraft({ ...draft, specialOffer: event.target.checked })} /> Special Offer</label>
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.featured)} onChange={(event) => setDraft({ ...draft, featured: event.target.checked })} /> Featured</label>
             </div>
             <label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+            <div className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 md:col-span-2">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <div>
+                  <p className="text-sm font-black text-slate-800">Size, dimensions and custom options</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Add any option section, then tick which values are available for customers.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {PRODUCT_OPTION_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.name}
+                      type="button"
+                      variant="secondary"
+                      className="h-9 px-3 text-xs"
+                      onClick={() => addOptionGroup({ name: preset.name, values: preset.values.map((value) => ({ ...value })) })}
+                    >
+                      + {preset.name}
+                    </Button>
+                  ))}
+                  <Button type="button" variant="ghost" className="h-9 px-3 text-xs" onClick={() => addOptionGroup()}>
+                    + Custom
+                  </Button>
+                </div>
+              </div>
+              {draft.optionGroups.length ? (
+                <div className="grid gap-3">
+                  {draft.optionGroups.map((group, groupIndex) => (
+                    <div key={`${group.name}-${groupIndex}`} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                        <Input
+                          value={group.name}
+                          onChange={(event) => updateOptionGroup(groupIndex, { ...group, name: event.target.value })}
+                          placeholder="Section name, e.g. Size or Chair Dimensions"
+                        />
+                        <Button type="button" variant="danger" className="h-11" onClick={() => removeOptionGroup(groupIndex)}>Remove Section</Button>
+                      </div>
+                      <div className="grid gap-2">
+                        {group.values.map((value, valueIndex) => (
+                          <div key={`${value.label}-${valueIndex}`} className="grid gap-2 sm:grid-cols-[1fr_150px_auto] sm:items-center">
+                            <Input
+                              value={value.label}
+                              onChange={(event) => {
+                                const values = group.values.map((item, index) => (index === valueIndex ? { ...item, label: event.target.value } : item));
+                                updateOptionGroup(groupIndex, { ...group, values });
+                              }}
+                              placeholder={group.name.toLowerCase().includes("dimension") ? "Example: Seat width 46 cm" : "Example: XL"}
+                            />
+                            <label className="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={value.available !== false}
+                                onChange={(event) => {
+                                  const values = group.values.map((item, index) => (index === valueIndex ? { ...item, available: event.target.checked } : item));
+                                  updateOptionGroup(groupIndex, { ...group, values });
+                                }}
+                              />
+                              Available
+                            </label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-11"
+                              onClick={() => updateOptionGroup(groupIndex, { ...group, values: group.values.filter((_, index) => index !== valueIndex) })}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-10 justify-self-start px-3 text-xs"
+                        onClick={() => updateOptionGroup(groupIndex, { ...group, values: [...group.values, { label: "", available: true }] })}
+                      >
+                        + Add option value
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-slate-200 p-4 text-sm font-semibold text-slate-500">No size or dimension options added yet.</p>
+              )}
+            </div>
             <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:col-span-2">
               <div>
                 <p className="text-sm font-black text-slate-800">Media</p>
@@ -1011,7 +1158,7 @@ export function ProductsAdmin() {
           </div>
         ) : null}
       </Modal>
-      <Modal open={Boolean(viewing)} title="Product Details" onClose={() => setViewing(null)}>{viewing ? <div className="space-y-3 text-sm text-slate-700"><p><b>Name:</b> {viewing.name}</p><p><b>Category:</b> {viewing.category}</p><p><b>Subcategory:</b> {viewing.subcategoryName ?? "No subcategory selected"}</p><p><b>Description:</b> {viewing.description}</p><p><b>Price:</b> {formatCurrency(viewing.price)}</p></div> : null}</Modal>
+      <Modal open={Boolean(viewing)} title="Product Details" onClose={() => setViewing(null)}>{viewing ? <div className="space-y-3 text-sm text-slate-700"><p><b>Name:</b> {viewing.name}</p><p><b>Category:</b> {viewing.category}</p><p><b>Subcategory:</b> {viewing.subcategoryName ?? "No subcategory selected"}</p><p><b>Description:</b> {viewing.description}</p><p><b>Price:</b> {formatCurrency(viewing.price)}</p>{viewing.options?.length ? <div><b>Options:</b><div className="mt-2 grid gap-2">{viewing.options.map((group) => <div key={group.name} className="rounded-lg bg-slate-50 p-3"><p className="font-black text-slate-900">{group.name}</p><p className="mt-1 text-xs font-semibold text-slate-500">{group.values.map((value) => `${value.label}${value.available ? "" : " (out)"}`).join(", ")}</p></div>)}</div></div> : null}</div> : null}</Modal>
       <ConfirmModal open={Boolean(deleting)} title="Delete product?" message={`Delete ${deleting?.name ?? "this product"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteProduct} />
       {actionMenu ? (
         <>
@@ -1022,7 +1169,7 @@ export function ProductsAdmin() {
           >
             <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => { setViewing(actionMenu.product); setActionMenu(null); }}>View</button>
             <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => { openEdit(actionMenu.product); setActionMenu(null); }}>Edit</button>
-            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(actionMenu.product, "is_active")}>{actionMenu.product.active === false ? "Mark Available" : "Mark Unavailable"}</button>
+            <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(actionMenu.product, "is_active")}>{actionMenu.product.active === false ? "Publish Product" : "Hide Product"}</button>
             <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={actionMenu.product.active === false} onClick={() => toggleProductFlag(actionMenu.product, "show_on_homepage")}>{actionMenu.product.showOnHomepage ? "Hide from Homepage" : "Show on Homepage"}</button>
             <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => toggleProductFlag(actionMenu.product, "is_special_offer")}>{actionMenu.product.specialOffer ? "Unmark Special Offer" : "Mark Special Offer"}</button>
             <button className="rounded-md px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50" onClick={() => { setDeleting(actionMenu.product); setActionMenu(null); }}>Delete</button>

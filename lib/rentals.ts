@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
+import { normalizeProductOptions } from "@/lib/productOptions";
 import type { Product, ProductCategory, Rental } from "@/types";
 import { createPublicClient } from "@/utils/supabase/public";
 
@@ -27,6 +28,7 @@ type ProductJoin = {
     description: string | null;
     brand: string | null;
     features: string[] | null;
+    product_options?: unknown;
     product_images?: { image_url?: string | null; sort_order: number | null; media_type?: string | null }[];
 };
 
@@ -58,6 +60,7 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
     description: productRow?.description ?? row.description ?? "",
     features: productRow?.features ?? ["Daily rental pricing", "Availability managed from dashboard", "Call support available"],
     brand: productRow?.brand ?? "Gargi Care",
+    options: normalizeProductOptions(productRow?.product_options),
   };
 
   return {
@@ -78,7 +81,7 @@ async function fetchActiveRentals() {
     const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("rentals")
-      .select("*, products(id, name, category, price, discount, stock, description, brand, features, product_images(sort_order, media_type))")
+      .select("*, products(*, product_images(sort_order, media_type))")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
 

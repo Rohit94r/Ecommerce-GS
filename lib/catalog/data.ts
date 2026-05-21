@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { categories as defaultCategories } from "@/lib/dummyData";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
+import { normalizeProductOptions } from "@/lib/productOptions";
 import { slugify } from "@/lib/utils";
 import { createPublicClient } from "@/utils/supabase/public";
 import type { CommerceCategory, CommerceProduct, CommerceSubcategory, ProductMedia } from "@/types";
@@ -44,6 +45,7 @@ type ProductRow = {
   description: string | null;
   brand: string | null;
   features: string[] | null;
+  product_options?: unknown;
   is_active: boolean | null;
   product_images?: ProductImageRow[] | null;
 };
@@ -115,6 +117,7 @@ function mapProduct(row: ProductRow): CommerceProduct {
     description: row.description ?? "",
     features: row.features ?? [],
     brand: row.brand ?? "Gargi Care",
+    options: normalizeProductOptions(row.product_options),
   };
 }
 
@@ -143,7 +146,7 @@ async function fetchCatalogCategories(): Promise<CommerceCategory[]> {
         .eq("is_active", true),
       supabase
         .from("products")
-        .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+        .select("*, product_images(sort_order, media_type)")
         .eq("is_active", true),
     ]);
 
@@ -233,7 +236,7 @@ async function fetchCatalogCategory(slug: string) {
       productQueries.push(
         supabase
           .from("products")
-          .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+          .select("*, product_images(sort_order, media_type)")
           .eq("is_active", true)
           .in("subcategory_id", subcategoryIds),
       );
@@ -242,7 +245,7 @@ async function fetchCatalogCategory(slug: string) {
     productQueries.push(
       supabase
         .from("products")
-        .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+        .select("*, product_images(sort_order, media_type)")
         .eq("is_active", true)
         .is("subcategory_id", null)
         .eq("category", category.name),
@@ -304,7 +307,7 @@ async function fetchCatalogSubcategory(categorySlug: string, subcategorySlug: st
     const subcategory = findOrCreateSubcategory(category, subcategoryRow.name, subcategoryRow.slug);
     const { data: productsData, error: productsError } = await supabase
       .from("products")
-      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+      .select("*, product_images(sort_order, media_type)")
       .eq("is_active", true)
       .eq("subcategory_id", subcategoryRow.id);
 
@@ -347,7 +350,7 @@ async function fetchCatalogProduct(categorySlug: string, subcategorySlug: string
     const subcategoryRow = subcategoryData as SubcategoryRow;
     const { data: productData, error: productError } = await supabase
       .from("products")
-      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+      .select("*, product_images(sort_order, media_type)")
       .eq("id", id)
       .eq("subcategory_id", subcategoryRow.id)
       .eq("is_active", true)

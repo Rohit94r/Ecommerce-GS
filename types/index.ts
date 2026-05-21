@@ -10,6 +10,16 @@ export type ProductMedia = {
   url: string;
 };
 
+export type ProductOptionValue = {
+  label: string;
+  available: boolean;
+};
+
+export type ProductOptionGroup = {
+  name: string;
+  values: ProductOptionValue[];
+};
+
 export type CommerceProduct = {
   id: string;
   name: string;
@@ -23,6 +33,7 @@ export type CommerceProduct = {
   description?: string;
   features?: string[];
   brand?: string;
+  options?: ProductOptionGroup[];
 };
 
 export type CommerceSubcategory = {
@@ -54,6 +65,7 @@ export type Product = {
   description: string;
   features: string[];
   brand: string;
+  options?: ProductOptionGroup[];
   showOnHomepage?: boolean;
   specialOffer?: boolean;
   featured?: boolean;

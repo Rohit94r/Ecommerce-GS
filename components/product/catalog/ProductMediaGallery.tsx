@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { OutOfStockWatermark } from "@/components/product/catalog/OutOfStockWatermark";
 import type { ProductMedia } from "@/types";
 
-export function ProductMediaGallery({ media, productName }: { media: ProductMedia[]; productName: string }) {
+export function ProductMediaGallery({ media, productName, inStock = true }: { media: ProductMedia[]; productName: string; inStock?: boolean }) {
   const items = useMemo(() => (media.length ? media : [{ type: "image" as const, url: "/media/Home-banner2.png" }]), [media]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -41,6 +42,7 @@ export function ProductMediaGallery({ media, productName }: { media: ProductMedi
 
       <div className="order-1 lg:order-2">
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <OutOfStockWatermark show={!inStock} />
           {active.type === "video" ? (
             <video
               key={active.url}

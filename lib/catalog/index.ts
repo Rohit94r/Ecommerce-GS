@@ -164,5 +164,6 @@ export function toCartProduct(product: CommerceProduct, category: CommerceCatego
     description: getCommerceProductDescription(product),
     features: getCommerceProductFeatures(product),
     brand: product.brand || productCopy[product.id]?.brand || `${category.name} ${subcategory.name}`,
+    options: product.options ?? [],
   };
 }
