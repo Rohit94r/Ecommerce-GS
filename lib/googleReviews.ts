@@ -1,5 +1,5 @@
-import { createClient } from "@/utils/supabase/server";
 import type { GoogleReview } from "@/types";
+import { createPublicClient } from "@/utils/supabase/public";
 
 type GoogleReviewRow = {
   id: string;
@@ -27,7 +27,7 @@ function mapReview(row: GoogleReviewRow): GoogleReview {
 
 export async function getFeaturedGoogleReviews() {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("google_reviews")
       .select("id, reviewer_name, area, rating, review, source, is_featured, created_at")

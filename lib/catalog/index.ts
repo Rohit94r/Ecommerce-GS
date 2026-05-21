@@ -126,8 +126,8 @@ export function getCommerceProductImages(product: CommerceProduct) {
   return product.images?.length ? product.images : commerceProductImages[product.id] ?? [product.image];
 }
 
-export function isVideoMediaUrl(url: string, type?: string | null) {
-  const normalized = url.toLowerCase();
+export function isVideoMediaUrl(url?: string | null, type?: string | null) {
+  const normalized = (url ?? "").toLowerCase();
   return type === "video" || normalized.startsWith("data:video/") || /\.(mp4|webm|ogg|mov)(\?|#|$)/.test(normalized);
 }
 

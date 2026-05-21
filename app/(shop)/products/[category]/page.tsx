@@ -13,7 +13,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
   const { category: categorySlug } = await params;
-  const category = await getCatalogCategory(categorySlug);
+  const category = categories.find((item) => item.slug === categorySlug);
 
   return {
     title: category ? category.name : "Category",

@@ -18,12 +18,13 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; subcategory: string }> }): Promise<Metadata> {
-  const { category, subcategory } = await params;
-  const result = await getCatalogSubcategory(category, subcategory);
+  const { category: categorySlug, subcategory: subcategorySlug } = await params;
+  const category = categories.find((item) => item.slug === categorySlug);
+  const subcategory = category?.subcategories.find((item) => item.slug === subcategorySlug);
 
   return {
-    title: result ? result.subcategory.name : "Products",
-    description: result ? `Shop ${result.subcategory.name} from Gargi Surgical & Healthcare.` : "Browse medical products.",
+    title: subcategory ? subcategory.name : "Products",
+    description: subcategory ? `Shop ${subcategory.name} from Gargi Surgical & Healthcare.` : "Browse medical products.",
   };
 }
 

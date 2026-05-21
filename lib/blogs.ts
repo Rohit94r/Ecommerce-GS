@@ -1,6 +1,6 @@
-import { createClient } from "@/utils/supabase/server";
 import { blogMediaRoute, isDataUrl } from "@/lib/media";
 import type { Blog } from "@/types";
+import { createPublicClient } from "@/utils/supabase/public";
 
 type BlogRow = {
   id: string;
@@ -41,7 +41,7 @@ function mapBlog(row: BlogRow): Blog {
 }
 
 async function selectPublishedBlogs() {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const result = await supabase
     .from("blogs")
     .select("id, title, slug, excerpt, content, image_url, created_at, blog_images(image_url, sort_order)")
@@ -58,7 +58,7 @@ async function selectPublishedBlogs() {
 }
 
 async function selectPublishedBlog(slug: string) {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const result = await supabase
     .from("blogs")
     .select("id, title, slug, excerpt, content, image_url, created_at, blog_images(image_url, sort_order)")

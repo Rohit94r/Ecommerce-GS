@@ -2,7 +2,7 @@ import { categories as defaultCategories } from "@/lib/dummyData";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
 import { slugify } from "@/lib/utils";
-import { createClient } from "@/utils/supabase/server";
+import { createPublicClient } from "@/utils/supabase/public";
 import type { CommerceCategory, CommerceProduct, CommerceSubcategory, ProductMedia } from "@/types";
 
 type CategoryRow = {
@@ -27,7 +27,7 @@ type SubcategoryRow = {
 };
 
 type ProductImageRow = {
-  image_url: string;
+  image_url?: string | null;
   sort_order: number | null;
   media_type?: string | null;
 };
@@ -57,6 +57,39 @@ function cloneDefaultCategories(): CommerceCategory[] {
       products: [],
     })),
   }));
+}
+
+function getDefaultCategory(slug: string) {
+  return cloneDefaultCategories().find((category) => category.slug === slug) ?? null;
+}
+
+function mergeCategoryRow(row: CategoryRow, fallback?: CommerceCategory | null): CommerceCategory {
+  const category: CommerceCategory = fallback
+    ? {
+        ...fallback,
+        subcategories: fallback.subcategories.map((subcategory) => ({ ...subcategory, products: [] })),
+      }
+    : {
+        name: row.name,
+        slug: row.slug,
+        description: row.description ?? "",
+        image: row.image_url ?? defaultProductImage,
+        subcategories: [],
+      };
+
+  category.name = row.name;
+  category.description = row.description || category.description;
+  category.image = row.image_url || category.image;
+
+  const subcategoryRows = (row.subcategories ?? [])
+    .filter((subcategory) => subcategory.is_active !== false)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+  subcategoryRows.forEach((subcategoryRow) => {
+    findOrCreateSubcategory(category, subcategoryRow.name, subcategoryRow.slug);
+  });
+
+  return category;
 }
 
 function mapProduct(row: ProductRow): CommerceProduct {
@@ -97,7 +130,7 @@ export async function getCatalogCategories(): Promise<CommerceCategory[]> {
   const subcategoryById = new Map<string, { category: CommerceCategory; subcategory: CommerceSubcategory }>();
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const [categoriesResult, productsResult] = await Promise.all([
       supabase
         .from("categories")
@@ -105,7 +138,7 @@ export async function getCatalogCategories(): Promise<CommerceCategory[]> {
         .eq("is_active", true),
       supabase
         .from("products")
-        .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(*)")
+        .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
         .eq("is_active", true),
     ]);
 
@@ -164,20 +197,181 @@ export async function getCatalogCategories(): Promise<CommerceCategory[]> {
 }
 
 export async function getCatalogCategory(slug: string) {
-  const categories = await getCatalogCategories();
-  return categories.find((category) => category.slug === slug);
+  const fallback = getDefaultCategory(slug);
+
+  try {
+    const supabase = createPublicClient();
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("categories")
+      .select("id, name, slug, description, image_url, sort_order, is_active, subcategories(id, category_id, name, slug, description, sort_order, is_active)")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (categoryError) return fallback;
+    if (!categoryData) return fallback;
+
+    const row = categoryData as CategoryRow;
+    const category = mergeCategoryRow(row, fallback);
+    const subcategoryRows = (row.subcategories ?? []).filter((subcategory) => subcategory.is_active !== false);
+    const subcategoryById = new Map<string, CommerceSubcategory>();
+
+    subcategoryRows.forEach((subcategoryRow) => {
+      const subcategory = findOrCreateSubcategory(category, subcategoryRow.name, subcategoryRow.slug);
+      subcategoryById.set(subcategoryRow.id, subcategory);
+    });
+
+    const subcategoryIds = subcategoryRows.map((subcategory) => subcategory.id);
+    const productQueries = [];
+
+    if (subcategoryIds.length) {
+      productQueries.push(
+        supabase
+          .from("products")
+          .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+          .eq("is_active", true)
+          .in("subcategory_id", subcategoryIds),
+      );
+    }
+
+    productQueries.push(
+      supabase
+        .from("products")
+        .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+        .eq("is_active", true)
+        .is("subcategory_id", null)
+        .eq("category", category.name),
+    );
+
+    const productsResults = await Promise.all(productQueries);
+
+    productsResults.forEach((productsResult) => {
+      if (productsResult.error) return;
+
+      ((productsResult.data ?? []) as ProductRow[]).forEach((productRow) => {
+        if (productRow.is_active === false) return;
+
+        const product = mapProduct(productRow);
+        const subcategory = productRow.subcategory_id ? subcategoryById.get(productRow.subcategory_id) : null;
+
+        if (subcategory) {
+          subcategory.products.push(product);
+          return;
+        }
+
+        findOrCreateSubcategory(category, "Other Products", "other-products").products.push(product);
+      });
+    });
+
+    return category;
+  } catch {
+    return fallback;
+  }
 }
 
 export async function getCatalogSubcategory(categorySlug: string, subcategorySlug: string) {
-  const category = await getCatalogCategory(categorySlug);
-  const subcategory = category?.subcategories.find((item) => item.slug === subcategorySlug);
-  return category && subcategory ? { category, subcategory } : null;
+  const fallbackCategory = getDefaultCategory(categorySlug);
+
+  try {
+    const supabase = createPublicClient();
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("categories")
+      .select("id, name, slug, description, image_url, sort_order, is_active, subcategories(id, category_id, name, slug, description, sort_order, is_active)")
+      .eq("slug", categorySlug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (categoryError) {
+      const fallbackSubcategory = fallbackCategory?.subcategories.find((item) => item.slug === subcategorySlug);
+      return fallbackCategory && fallbackSubcategory ? { category: fallbackCategory, subcategory: fallbackSubcategory } : null;
+    }
+
+    if (!categoryData) {
+      const fallbackSubcategory = fallbackCategory?.subcategories.find((item) => item.slug === subcategorySlug);
+      return fallbackCategory && fallbackSubcategory ? { category: fallbackCategory, subcategory: fallbackSubcategory } : null;
+    }
+
+    const categoryRow = categoryData as CategoryRow;
+    const category = mergeCategoryRow(categoryRow, fallbackCategory);
+    const subcategoryRow = (categoryRow.subcategories ?? []).find((item) => item.slug === subcategorySlug && item.is_active !== false);
+    if (!subcategoryRow) return null;
+
+    const subcategory = findOrCreateSubcategory(category, subcategoryRow.name, subcategoryRow.slug);
+    const { data: productsData, error: productsError } = await supabase
+      .from("products")
+      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+      .eq("is_active", true)
+      .eq("subcategory_id", subcategoryRow.id);
+
+    if (!productsError) {
+      subcategory.products = ((productsData ?? []) as ProductRow[])
+        .filter((row) => row.is_active !== false)
+        .map(mapProduct);
+    }
+
+    return { category, subcategory };
+  } catch {
+    const fallbackSubcategory = fallbackCategory?.subcategories.find((item) => item.slug === subcategorySlug);
+    return fallbackCategory && fallbackSubcategory ? { category: fallbackCategory, subcategory: fallbackSubcategory } : null;
+  }
 }
 
 export async function getCatalogProduct(categorySlug: string, subcategorySlug: string, id: string) {
-  const result = await getCatalogSubcategory(categorySlug, subcategorySlug);
-  const product = result?.subcategory.products.find((item) => item.id === id);
-  return result && product ? { ...result, product } : null;
+  try {
+    const supabase = createPublicClient();
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("categories")
+      .select("id, name, slug, description, image_url, sort_order, is_active")
+      .eq("slug", categorySlug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (categoryError || !categoryData) return null;
+
+    const categoryRow = categoryData as CategoryRow;
+    const { data: subcategoryData, error: subcategoryError } = await supabase
+      .from("subcategories")
+      .select("id, category_id, name, slug, description, sort_order, is_active")
+      .eq("category_id", categoryRow.id)
+      .eq("slug", subcategorySlug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (subcategoryError || !subcategoryData) return null;
+
+    const subcategoryRow = subcategoryData as SubcategoryRow;
+    const { data: productData, error: productError } = await supabase
+      .from("products")
+      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_active, product_images(sort_order, media_type)")
+      .eq("id", id)
+      .eq("subcategory_id", subcategoryRow.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (productError || !productData) return null;
+
+    const fallbackCategory = getDefaultCategory(categorySlug);
+    const category: CommerceCategory = {
+      name: categoryRow.name,
+      slug: categoryRow.slug,
+      description: categoryRow.description ?? fallbackCategory?.description ?? "",
+      image: categoryRow.image_url ?? fallbackCategory?.image ?? defaultProductImage,
+      subcategories: [],
+    };
+    const subcategory: CommerceSubcategory = {
+      name: subcategoryRow.name,
+      slug: subcategoryRow.slug,
+      products: [],
+    };
+    const product = mapProduct(productData as ProductRow);
+
+    subcategory.products.push(product);
+    category.subcategories.push(subcategory);
+
+    return { category, subcategory, product };
+  } catch {
+    return null;
+  }
 }
 
 function toProductMedia(rows: ProductImageRow[], productId: string): ProductMedia[] {
@@ -186,7 +380,7 @@ function toProductMedia(rows: ProductImageRow[], productId: string): ProductMedi
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map((row, index) => ({
       type: isVideoMediaUrl(row.image_url, row.media_type) ? ("video" as const) : ("image" as const),
-      url: isDataUrl(row.image_url) ? productMediaRoute(productId, index) : row.image_url,
+      url: row.image_url && !isDataUrl(row.image_url) ? row.image_url : productMediaRoute(productId, index),
     }))
     .sort((a, b) => Number(a.type === "video") - Number(b.type === "video"));
 }

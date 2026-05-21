@@ -1,7 +1,7 @@
-import { createClient } from "@/utils/supabase/server";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
 import type { Product, ProductCategory, ProductMedia } from "@/types";
+import { createPublicClient } from "@/utils/supabase/public";
 
 type HomeProductRow = {
   id: string;
@@ -25,7 +25,7 @@ type HomeProductRow = {
     slug: string;
     categories?: { slug: string } | { slug: string }[] | null;
   }[] | null;
-  product_images?: { image_url: string; sort_order: number | null; media_type?: string | null }[];
+  product_images?: { image_url?: string | null; sort_order: number | null; media_type?: string | null }[];
 };
 
 const defaultImage = "/media/Home-banner2.png";
@@ -61,10 +61,10 @@ function toProduct(row: HomeProductRow): Product {
 
 export async function getHomepageProducts() {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_rental, is_featured, show_on_homepage, is_special_offer, subcategories(slug, categories(slug)), product_images(*)")
+      .select("id, subcategory_id, name, category, price, discount, stock, description, brand, features, is_rental, is_featured, show_on_homepage, is_special_offer, subcategories(slug, categories(slug)), product_images(sort_order, media_type)")
       .eq("is_active", true)
       .eq("show_on_homepage", true)
       .order("is_special_offer", { ascending: false })
@@ -86,7 +86,7 @@ function toProductMedia(rows: NonNullable<HomeProductRow["product_images"]>, pro
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map((row, index) => ({
       type: isVideoMediaUrl(row.image_url, row.media_type) ? ("video" as const) : ("image" as const),
-      url: isDataUrl(row.image_url) ? productMediaRoute(productId, index) : row.image_url,
+      url: row.image_url && !isDataUrl(row.image_url) ? row.image_url : productMediaRoute(productId, index),
     }))
     .sort((a, b) => Number(a.type === "video") - Number(b.type === "video"));
 }

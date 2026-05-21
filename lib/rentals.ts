@@ -1,6 +1,6 @@
-import { createClient } from "@/utils/supabase/server";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
 import type { Product, ProductCategory, Rental } from "@/types";
+import { createPublicClient } from "@/utils/supabase/public";
 
 type RentalRow = {
   id: string;
@@ -26,7 +26,7 @@ type ProductJoin = {
     description: string | null;
     brand: string | null;
     features: string[] | null;
-    product_images?: { image_url: string; sort_order: number | null }[];
+    product_images?: { image_url?: string | null; sort_order: number | null; media_type?: string | null }[];
 };
 
 const defaultImage = "/media/Home-banner2.png";
@@ -35,7 +35,11 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
   const productRow = Array.isArray(row.products) ? row.products[0] : row.products;
   const images = productRow?.product_images
     ?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((image, index) => (productRow.id && isDataUrl(image.image_url) ? productMediaRoute(productRow.id, index) : image.image_url)) ?? [];
+    .flatMap((image, index) => (
+      image.media_type === "video"
+        ? []
+        : [image.image_url && !isDataUrl(image.image_url) ? image.image_url : productMediaRoute(productRow.id, index)]
+    )) ?? [];
 
   const product: Product = {
     id: row.product_id ?? row.id,
@@ -66,10 +70,10 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
 
 export async function getActiveRentals() {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("rentals")
-      .select("*, products(id, name, category, price, discount, stock, description, brand, features, product_images(*))")
+      .select("*, products(id, name, category, price, discount, stock, description, brand, features, product_images(sort_order, media_type))")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
 

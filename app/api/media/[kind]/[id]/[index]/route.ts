@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createPublicClient } from "@/utils/supabase/public";
 
 export const runtime = "nodejs";
 
@@ -33,11 +33,17 @@ function mediaResponse(request: Request, url: string) {
   }
 
   const target = new URL(url, request.url);
-  return Response.redirect(target, 302);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      Location: target.toString(),
+    },
+  });
 }
 
 async function getProductMedia(productId: string, index: number): Promise<MediaRow | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("product_images")
     .select("image_url, media_type")
@@ -51,7 +57,7 @@ async function getProductMedia(productId: string, index: number): Promise<MediaR
 }
 
 async function getBlogMedia(blogId: string, index: number): Promise<MediaRow | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const galleryResult = await supabase
     .from("blog_images")
     .select("image_url")
