@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSignupOtpCookie, generateSignupOtp, normalizeAuthEmail, SIGNUP_OTP_COOKIE, SIGNUP_OTP_MAX_AGE_SECONDS } from "@/lib/auth/signupOtp";
-import { sendSignupOtpEmail } from "@/lib/auth/sendSignupOtpEmail";
+import { sendSignupOtpEmail, SignupOtpEmailError } from "@/lib/auth/sendSignupOtpEmail";
 
 export const runtime = "nodejs";
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error("Signup OTP send failed", error);
-    return NextResponse.json({ error: getSignupOtpConfigMessage(error) }, { status: 500 });
+    return NextResponse.json({ error: getSignupOtpConfigMessage(error), code: getSignupOtpErrorCode(error) }, { status: 500 });
   }
 }
 
@@ -69,6 +69,10 @@ function assertSignupOtpConfig() {
 }
 
 function getSignupOtpConfigMessage(error: unknown) {
+  if (error instanceof SignupOtpEmailError) {
+    return error.publicMessage;
+  }
+
   if (error instanceof Error) {
     if (error.message.includes("service role")) {
       return "Signup OTP is not configured. Add SUPABASE_SERVICE_ROLE_KEY in .env.local.";
@@ -82,4 +86,9 @@ function getSignupOtpConfigMessage(error: unknown) {
   }
 
   return "Could not send OTP. Please try again.";
+}
+
+function getSignupOtpErrorCode(error: unknown) {
+  if (error instanceof SignupOtpEmailError) return error.code;
+  return "SIGNUP_OTP_SEND_FAILED";
 }
