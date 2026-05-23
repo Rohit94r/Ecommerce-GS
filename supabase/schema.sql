@@ -344,6 +344,7 @@ as $$
   select lower(coalesce(auth.jwt() ->> 'email', '')) in (
     'sureshptl2006@gmail.com',
     'gargihealthcaresales@gmail.com',
+    'gargisurgical58@gmail.com',
     'rjdhav67@gmail.com'
   );
 $$;

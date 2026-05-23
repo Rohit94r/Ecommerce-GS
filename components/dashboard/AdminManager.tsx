@@ -225,6 +225,10 @@ function readFiles(files: FileList | null, onLoad: (images: string[]) => void) {
   ).then(onLoad);
 }
 
+function uniqueImages(images: string[]) {
+  return Array.from(new Set(images.filter(Boolean)));
+}
+
 function isVideoMediaUrl(url: string, type?: string | null) {
   const normalized = url.toLowerCase();
   return type === "video" || normalized.startsWith("data:video/") || /\.(mp4|webm|ogg|mov)(\?|#|$)/.test(normalized);
@@ -1232,7 +1236,7 @@ export function RentalsAdmin() {
     if (draft.price_per_day <= 0) return show("Price per day is required", "error");
     if ((draft.price_per_week ?? 0) < 0 || (draft.price_per_month ?? 0) < 0) return show("Rental prices cannot be negative", "error");
     setLoading(true);
-    const images = draft.images?.length ? draft.images : [draft.image || defaultImage];
+    const images = uniqueImages(draft.images?.length ? draft.images : [draft.image || defaultImage]);
     const payload = {
       name: draft.name,
       slug: slugify(draft.name),
@@ -1251,11 +1255,11 @@ export function RentalsAdmin() {
     if (result.error) show(cleanError(result.error), "error");
     else {
       const rentalId = String(result.data.id);
-      let savedGallery = true;
+      let galleryError = "";
       const deleteImages = await supabase.from("rental_images").delete().eq("rental_id", rentalId);
 
       if (deleteImages.error) {
-        savedGallery = false;
+        galleryError = cleanError(deleteImages.error);
       } else {
         const imageRows = images.map((image, index) => ({
           rental_id: rentalId,
@@ -1264,11 +1268,11 @@ export function RentalsAdmin() {
           sort_order: index,
         }));
         const insertImages = await supabase.from("rental_images").insert(imageRows);
-        savedGallery = !insertImages.error;
+        if (insertImages.error) galleryError = cleanError(insertImages.error);
       }
 
       setDraft(null);
-      show(savedGallery ? "Rental saved in Supabase" : "Rental saved. Run latest Supabase schema to enable multiple rental photos.", savedGallery ? "success" : "error");
+      show(galleryError ? `Rental saved, but photos did not save: ${galleryError}` : `Rental saved with ${images.length} photo${images.length === 1 ? "" : "s"}.`, galleryError ? "error" : "success");
       await loadRentals();
     }
     setLoading(false);
@@ -1352,10 +1356,16 @@ export function RentalsAdmin() {
                 <label className="grid min-h-36 cursor-pointer place-items-center rounded-lg border border-dashed border-[#047068]/35 bg-[#047068]/5 p-4 text-center text-sm font-black text-[#047068] transition hover:bg-[#047068]/10">
                   <span className="text-3xl leading-none">+</span>
                   <span>Add photos</span>
-                  <Input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => readFiles(event.target.files, (images) => {
-                    const nextImages = [...(draft.images ?? []), ...images];
-                    setDraft({ ...draft, images: nextImages, image: nextImages[0] ?? draft.image });
-                  })} />
+                  <Input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => {
+                    readFiles(event.target.files, (images) => {
+                      setDraft((current) => {
+                        if (!current) return current;
+                        const nextImages = uniqueImages([...(current.images ?? []), ...images]);
+                        return { ...current, images: nextImages, image: nextImages[0] ?? current.image };
+                      });
+                    });
+                    event.currentTarget.value = "";
+                  }} />
                 </label>
               </div>
             </div>
