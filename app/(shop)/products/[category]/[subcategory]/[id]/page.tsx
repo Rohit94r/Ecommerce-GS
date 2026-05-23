@@ -3,9 +3,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/Badge";
 import { CatalogBreadcrumbs } from "@/components/product/catalog/CatalogBreadcrumbs";
-import { CommerceProductActions } from "@/components/product/catalog/CommerceProductActions";
 import { ProductMediaGallery } from "@/components/product/catalog/ProductMediaGallery";
-import { ProductOptionGroups } from "@/components/product/catalog/ProductOptionGroups";
+import { ProductOptionsPurchasePanel } from "@/components/product/catalog/ProductOptionsPurchasePanel";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { getCommerceProductDescription, getCommerceProductFeatures, getCommerceProductMedia, toCartProduct } from "@/lib/catalog";
 import { getCatalogProduct } from "@/lib/catalog/data";
@@ -62,8 +61,6 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
               Same Day / Next Day Delivery Available
             </div>
 
-            <ProductOptionGroups groups={product.options} />
-
             <ul className="mt-7 grid gap-3">
               {getCommerceProductFeatures(product).map((feature) => (
                 <li key={feature} className="rounded-lg border border-[#047068]/15 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-700">
@@ -72,7 +69,7 @@ export default async function CommerceProductDetailPage({ params }: { params: Pr
               ))}
             </ul>
 
-            <CommerceProductActions cartProduct={cartProduct} inStock={product.stock} />
+            <ProductOptionsPurchasePanel groups={product.options} cartProduct={cartProduct} inStock={product.stock} />
           </div>
         </div>
 

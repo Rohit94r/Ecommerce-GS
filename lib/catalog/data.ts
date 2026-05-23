@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { categories as defaultCategories } from "@/lib/dummyData";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
-import { normalizeProductOptions } from "@/lib/productOptions";
+import { cleanProductFeatures, getProductOptions } from "@/lib/productOptions";
 import { slugify } from "@/lib/utils";
 import { createPublicClient } from "@/utils/supabase/public";
 import type { CommerceCategory, CommerceProduct, CommerceSubcategory, ProductMedia } from "@/types";
@@ -115,9 +115,9 @@ function mapProduct(row: ProductRow): CommerceProduct {
     videos,
     media: media.length ? media : [{ type: "image", url: defaultProductImage }],
     description: row.description ?? "",
-    features: row.features ?? [],
+    features: cleanProductFeatures(row.features),
     brand: row.brand ?? "Gargi Care",
-    options: normalizeProductOptions(row.product_options),
+    options: getProductOptions(row.product_options, row.features),
   };
 }
 

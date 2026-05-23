@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { OutOfStockWatermark } from "@/components/product/catalog/OutOfStockWatermark";
 import { useCart } from "@/hooks/useCart";
+import { getCartProductKey } from "@/lib/cart";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/types";
 
@@ -32,7 +33,8 @@ export function HomeProductScroller({ products }: { products: Product[] }) {
       <div className={`home-products-track grid grid-flow-col grid-rows-2 gap-4 overflow-x-auto pb-3 ${shouldScroll ? "w-max" : ""}`}>
         {scrollingProducts.map((product, index) => {
           const discountedPrice = Math.round(product.price - (product.price * product.discount) / 100);
-          const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
+          const productKey = getCartProductKey(product);
+          const cartQuantity = items.find((item) => getCartProductKey(item.product) === productKey)?.quantity ?? 0;
 
           return (
             <article key={`${product.id}-${index}`} className="group w-[78vw] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#047068]/10 sm:w-[330px] lg:w-[calc((1280px-32px)/3)]">

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, createElement, useContext, useMemo, useSyncExternalStore } from "react";
+import { getCartProductKey } from "@/lib/cart";
 import type { CartItem, Product } from "@/types";
 
 type CartContextValue = {
@@ -8,8 +9,8 @@ type CartContextValue = {
   count: number;
   total: number;
   addItem: (product: Product) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productKey: string) => void;
+  updateQuantity: (productKey: string, quantity: number) => void;
   clearCart: () => void;
 };
 
@@ -73,22 +74,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       addItem(product) {
         if (product.stock <= 0) return;
         updateCart((current) => {
-          const existing = current.find((item) => item.product.id === product.id);
+          const productKey = getCartProductKey(product);
+          const existing = current.find((item) => getCartProductKey(item.product) === productKey);
           if (existing) {
             return current.map((item) =>
-              item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
+              getCartProductKey(item.product) === productKey ? { ...item, quantity: item.quantity + 1 } : item,
             );
           }
           return [...current, { product, quantity: 1 }];
         });
       },
-      removeItem(productId) {
-        updateCart((current) => current.filter((item) => item.product.id !== productId));
+      removeItem(productKey) {
+        updateCart((current) => current.filter((item) => getCartProductKey(item.product) !== productKey));
       },
-      updateQuantity(productId, quantity) {
+      updateQuantity(productKey, quantity) {
         updateCart((current) =>
           current
-            .map((item) => (item.product.id === productId ? { ...item, quantity: Math.max(1, quantity) } : item))
+            .map((item) => (getCartProductKey(item.product) === productKey ? { ...item, quantity: Math.max(1, quantity) } : item))
             .filter((item) => item.quantity > 0),
         );
       },

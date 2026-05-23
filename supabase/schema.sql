@@ -84,6 +84,15 @@ create table if not exists public.rentals (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.rental_images (
+  id uuid primary key default gen_random_uuid(),
+  rental_id uuid not null references public.rentals(id) on delete cascade,
+  image_url text not null,
+  alt_text text not null default '',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
@@ -200,6 +209,7 @@ create index if not exists idx_products_homepage on public.products(show_on_home
 create index if not exists idx_products_special_offer on public.products(is_special_offer);
 create index if not exists idx_product_images_product_id on public.product_images(product_id);
 create index if not exists idx_rentals_product_id on public.rentals(product_id);
+create index if not exists idx_rental_images_rental_id on public.rental_images(rental_id);
 create index if not exists idx_orders_status on public.orders(status);
 create index if not exists idx_orders_user_id on public.orders(user_id);
 create index if not exists idx_order_items_order_id on public.order_items(order_id);
@@ -343,6 +353,7 @@ alter table public.subcategories enable row level security;
 alter table public.products enable row level security;
 alter table public.product_images enable row level security;
 alter table public.rentals enable row level security;
+alter table public.rental_images enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.blogs enable row level security;
@@ -374,6 +385,18 @@ drop policy if exists "Public can read active rentals" on public.rentals;
 create policy "Public can read active rentals"
 on public.rentals for select
 using (is_active = true);
+
+drop policy if exists "Public can read rental images" on public.rental_images;
+create policy "Public can read rental images"
+on public.rental_images for select
+using (
+  exists (
+    select 1
+    from public.rentals
+    where rentals.id = rental_images.rental_id
+      and rentals.is_active = true
+  )
+);
 
 drop policy if exists "Public can read published blogs" on public.blogs;
 create policy "Public can read published blogs"
@@ -424,6 +447,12 @@ with check (public.is_admin());
 drop policy if exists "Authenticated users can manage rentals" on public.rentals;
 create policy "Authenticated users can manage rentals"
 on public.rentals for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "Authenticated users can manage rental images" on public.rental_images;
+create policy "Authenticated users can manage rental images"
+on public.rental_images for all
 using (public.is_admin())
 with check (public.is_admin());
 
@@ -505,6 +534,7 @@ with check (
 drop policy if exists "Development dashboard can manage products" on public.products;
 drop policy if exists "Development dashboard can manage product images" on public.product_images;
 drop policy if exists "Development dashboard can manage rentals" on public.rentals;
+drop policy if exists "Development dashboard can manage rental images" on public.rental_images;
 drop policy if exists "Development dashboard can manage orders" on public.orders;
 drop policy if exists "Development dashboard can manage order items" on public.order_items;
 drop policy if exists "Development dashboard can manage blogs" on public.blogs;

@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useCart } from "@/hooks/useCart";
+import { getCartProductKey } from "@/lib/cart";
 import { business } from "@/lib/dummyData";
 import { whatsappLink } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export function ProductActions({ product }: { product: Product }) {
   const { addItem, items } = useCart();
-  const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
+  const productKey = getCartProductKey(product);
+  const cartQuantity = items.find((item) => getCartProductKey(item.product) === productKey)?.quantity ?? 0;
 
   return (
     <div className="mt-8 grid gap-3">

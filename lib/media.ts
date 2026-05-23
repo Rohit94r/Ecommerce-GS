@@ -9,3 +9,7 @@ export function productMediaRoute(productId: string, index: number) {
 export function blogMediaRoute(blogId: string, index: number) {
   return `/api/media/blog/${encodeURIComponent(blogId)}/${index}`;
 }
+
+export function rentalMediaRoute(rentalId: string, index: number) {
+  return `/api/media/rental/${encodeURIComponent(rentalId)}/${index}`;
+}

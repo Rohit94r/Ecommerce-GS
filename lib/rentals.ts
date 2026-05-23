@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
-import { isDataUrl, productMediaRoute } from "@/lib/media";
-import { normalizeProductOptions } from "@/lib/productOptions";
+import { isDataUrl, productMediaRoute, rentalMediaRoute } from "@/lib/media";
+import { cleanProductFeatures, getProductOptions } from "@/lib/productOptions";
 import type { Product, ProductCategory, Rental } from "@/types";
 import { createPublicClient } from "@/utils/supabase/public";
 
@@ -15,6 +15,7 @@ type RentalRow = {
   availability: boolean;
   description: string | null;
   image_url: string | null;
+  rental_images?: { image_url: string; sort_order: number | null }[] | null;
   products?: ProductJoin | ProductJoin[] | null;
 };
 
@@ -40,27 +41,35 @@ const rentalsCache = {
 
 function mapRental(row: RentalRow): { product: Product; rental: Rental } {
   const productRow = Array.isArray(row.products) ? row.products[0] : row.products;
-  const images = productRow?.product_images
+  const productImages = productRow?.product_images
     ?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .flatMap((image, index) => (
       image.media_type === "video"
         ? []
         : [image.image_url && !isDataUrl(image.image_url) ? image.image_url : productMediaRoute(productRow.id, index)]
     )) ?? [];
+  const rentalImages = (row.rental_images ?? [])
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((image, index) => (isDataUrl(image.image_url) ? rentalMediaRoute(row.id, index) : image.image_url))
+    .filter(Boolean);
+  const images = rentalImages.length ? rentalImages : productImages;
+  const fallbackFeatures = ["Daily rental pricing", "Availability managed from dashboard", "Call support available"];
+  const productFeatures = cleanProductFeatures(productRow?.features);
 
   const product: Product = {
     id: row.product_id ?? row.id,
     name: productRow?.name ?? row.name,
     price: productRow ? Number(productRow.price) : Number(row.price_per_day),
     category: (productRow?.category ?? row.category ?? "Mobility") as ProductCategory,
-    images: images.length ? images : [row.image_url ?? defaultImage],
+    images: images.length ? images : [row.image_url && isDataUrl(row.image_url) ? rentalMediaRoute(row.id, 0) : row.image_url ?? defaultImage],
     stock: productRow?.stock ?? (row.availability ? 1 : 0),
     discount: productRow ? Number(productRow.discount) : 0,
     isRental: true,
     description: productRow?.description ?? row.description ?? "",
-    features: productRow?.features ?? ["Daily rental pricing", "Availability managed from dashboard", "Call support available"],
+    features: productFeatures.length ? productFeatures : fallbackFeatures,
     brand: productRow?.brand ?? "Gargi Care",
-    options: normalizeProductOptions(productRow?.product_options),
+    options: getProductOptions(productRow?.product_options, productRow?.features),
   };
 
   return {
@@ -81,11 +90,22 @@ async function fetchActiveRentals() {
     const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("rentals")
-      .select("*, products(*, product_images(sort_order, media_type))")
+      .select("*, rental_images(image_url, sort_order), products(*, product_images(sort_order, media_type))")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
 
-    if (error || !data) return [];
+    if (error) {
+      const fallback = await supabase
+        .from("rentals")
+        .select("*, products(*, product_images(sort_order, media_type))")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (fallback.error || !fallback.data) return [];
+      return (fallback.data as unknown as RentalRow[]).map(mapRental);
+    }
+
+    if (!data) return [];
     return (data as unknown as RentalRow[]).map(mapRental);
   } catch {
     return [];

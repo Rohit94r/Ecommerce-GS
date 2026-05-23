@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { OutOfStockWatermark } from "@/components/product/catalog/OutOfStockWatermark";
 import { useCart } from "@/hooks/useCart";
+import { getCartProductKey } from "@/lib/cart";
 import { getCommerceProductImages, toCartProduct } from "@/lib/catalog";
 import { formatCurrency } from "@/lib/utils";
 import type { CommerceCategory, CommerceProduct, CommerceSubcategory } from "@/types";
@@ -22,8 +23,9 @@ export function CommerceProductCard({
   const { addItem, items } = useCart();
   const discountedPrice = Math.round(product.price - (product.price * product.discount) / 100);
   const href = `/products/${category.slug}/${subcategory.slug}/${product.id}`;
-  const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
   const cartProduct = toCartProduct(product, category, subcategory);
+  const productKey = getCartProductKey(cartProduct);
+  const cartQuantity = items.find((item) => getCartProductKey(item.product) === productKey)?.quantity ?? 0;
 
   return (
     <article className={`group overflow-hidden rounded-lg border bg-white shadow-sm shadow-slate-900/5 transition duration-300 ease-out hover:-translate-y-1 hover:border-[#047068]/25 hover:shadow-xl hover:shadow-[#047068]/10 ${cartQuantity > 0 ? "border-[#047068] ring-2 ring-[#047068]/15" : "border-slate-200/80"}`}>

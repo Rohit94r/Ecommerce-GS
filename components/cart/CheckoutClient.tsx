@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { useCart } from "@/hooks/useCart";
 import { calculateOrderBilling } from "@/lib/billing";
+import { getCartProductKey, getSelectedOptionsText } from "@/lib/cart";
 import { business } from "@/lib/dummyData";
 import { formatCurrency, whatsappLink } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
@@ -17,7 +18,10 @@ export function CheckoutClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const billing = calculateOrderBilling(total);
-  const summary = items.map((item) => `${item.quantity} x ${item.product.name}`).join(", ");
+  const summary = items.map((item) => {
+    const selectedOptions = getSelectedOptionsText(item.product);
+    return `${item.quantity} x ${item.product.name}${selectedOptions ? ` (${selectedOptions})` : ""}`;
+  }).join(", ");
   const message = `Hi ${business.name}, I want to place a COD order. Name: ${form.name}. Phone: ${form.phone}. Address: ${form.address}. Items: ${summary}. Subtotal: ${formatCurrency(billing.subtotal)}. Delivery: ${billing.delivery ? formatCurrency(billing.delivery) : "Free"}. Payable total: ${formatCurrency(billing.grandTotal)}.`;
 
   useEffect(() => {
@@ -61,13 +65,17 @@ export function CheckoutClient() {
     }
 
     const { error: itemError } = await supabase.from("order_items").insert(
-      items.map((item) => ({
-        order_id: order.id,
-        product_id: /^[0-9a-f-]{36}$/i.test(item.product.id) ? item.product.id : null,
-        product_name: item.product.name,
-        unit_price: item.product.price,
-        quantity: item.quantity,
-      })),
+      items.map((item) => {
+        const selectedOptions = getSelectedOptionsText(item.product);
+
+        return {
+          order_id: order.id,
+          product_id: /^[0-9a-f-]{36}$/i.test(item.product.id) ? item.product.id : null,
+          product_name: `${item.product.name}${selectedOptions ? ` (${selectedOptions})` : ""}`,
+          unit_price: item.product.price,
+          quantity: item.quantity,
+        };
+      }),
     );
 
     setLoading(false);
@@ -95,12 +103,16 @@ export function CheckoutClient() {
       <aside className="h-fit rounded-md border border-[#047068]/15 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-black text-slate-950">Invoice summary</h2>
         <div className="mt-5 space-y-3">
-          {items.map((item) => (
-            <div key={item.product.id} className="flex justify-between gap-3 text-sm">
-              <span>{item.quantity} x {item.product.name}</span>
-              <span className="font-bold">{formatCurrency(item.product.price * item.quantity)}</span>
-            </div>
-          ))}
+          {items.map((item) => {
+            const selectedOptions = getSelectedOptionsText(item.product);
+
+            return (
+              <div key={getCartProductKey(item.product)} className="flex justify-between gap-3 text-sm">
+                <span>{item.quantity} x {item.product.name}{selectedOptions ? ` (${selectedOptions})` : ""}</span>
+                <span className="font-bold">{formatCurrency(item.product.price * item.quantity)}</span>
+              </div>
+            );
+          })}
         </div>
         <div className="mt-5 space-y-3 border-t border-[#047068]/15 pt-5 text-sm">
           <div className="flex justify-between"><span>Subtotal</span><span className="font-bold">{formatCurrency(billing.subtotal)}</span></div>

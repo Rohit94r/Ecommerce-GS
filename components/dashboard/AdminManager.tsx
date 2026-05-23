@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/utils/supabase/client";
 import { cn, formatCurrency, slugify } from "@/lib/utils";
 import { categories as catalogCategories } from "@/lib/dummyData";
-import { normalizeProductOptions, PRODUCT_OPTION_PRESETS } from "@/lib/productOptions";
+import { appendProductOptionsFeature, cleanProductFeatures, getProductOptions, normalizeProductOptions, PRODUCT_OPTION_PRESETS } from "@/lib/productOptions";
 import type { Blog, GoogleReview, Order, Product, ProductCategory, ProductMedia, ProductOptionGroup, Rental } from "@/types";
 
 type Toast = { message: string; tone: "success" | "error" };
@@ -99,6 +99,7 @@ type RentalRow = {
   availability: boolean;
   description: string;
   image_url: string | null;
+  rental_images?: { image_url: string; sort_order: number | null }[] | null;
 };
 type GoogleReviewRow = {
   id: string;
@@ -126,7 +127,7 @@ type OrderRow = {
   order_items?: OrderItemRow[];
 };
 type AdminProduct = Product & { featured?: boolean; showOnHomepage?: boolean; specialOffer?: boolean; active?: boolean; subcategoryId?: string | null; subcategoryName?: string | null; subcategorySlug?: string | null };
-type AdminRental = Rental & { id?: string; name: string; description: string; image: string };
+type AdminRental = Rental & { id?: string; name: string; description: string; image: string; images: string[] };
 type DraftProduct = {
   id?: string;
   name: string;
@@ -280,9 +281,9 @@ function mapProduct(row: ProductRow): AdminProduct {
     discount: Number(row.discount),
     isRental: row.is_rental,
     description: row.description,
-    features: row.features ?? [],
+    features: cleanProductFeatures(row.features),
     brand: row.brand ?? "Gargi Care",
-    options: normalizeProductOptions(row.product_options),
+    options: getProductOptions(row.product_options, row.features),
     featured: row.is_featured,
     showOnHomepage: Boolean(row.show_on_homepage),
     specialOffer: Boolean(row.is_special_offer),
@@ -294,6 +295,13 @@ function mapProduct(row: ProductRow): AdminProduct {
 }
 
 function mapRental(row: RentalRow): AdminRental {
+  const images = (row.rental_images ?? [])
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((image) => image.image_url)
+    .filter(Boolean);
+  const primaryImage = images[0] ?? row.image_url ?? defaultImage;
+
   return {
     id: row.id,
     product_id: row.product_id ?? row.id,
@@ -304,7 +312,8 @@ function mapRental(row: RentalRow): AdminRental {
     price_per_month: row.price_per_month ? Number(row.price_per_month) : undefined,
     availability: row.availability,
     description: row.description,
-    image: row.image_url ?? defaultImage,
+    image: primaryImage,
+    images: images.length ? images : [primaryImage],
   };
 }
 
@@ -652,7 +661,14 @@ export function ProductsAdmin() {
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("products").select("*, subcategories(id, name, slug, category_id), product_images(*)").order("created_at", { ascending: false });
+    let { data, error } = await supabase.from("products").select("*, subcategories(id, name, slug, category_id), product_images(*)").order("created_at", { ascending: false });
+
+    if (error) {
+      const fallback = await supabase.from("products").select("*").order("created_at", { ascending: false });
+      data = fallback.data as typeof data;
+      error = fallback.error;
+    }
+
     if (error) show(cleanError(error), "error");
     else setItems(((data ?? []) as ProductRow[]).map(mapProduct));
     setLoading(false);
@@ -826,6 +842,7 @@ export function ProductsAdmin() {
       return show(cleanError(error), "error");
     }
 
+    const optionGroups = normalizeProductOptions(draft.optionGroups);
     const payload = {
       name: draft.name,
       slug,
@@ -837,7 +854,7 @@ export function ProductsAdmin() {
       description: draft.description,
       brand: "Gargi Care",
       features: ["Admin managed product"],
-      product_options: normalizeProductOptions(draft.optionGroups),
+      product_options: optionGroups,
       is_featured: Boolean(draft.featured),
       show_on_homepage: Boolean(draft.active && draft.showOnHomepage),
       is_special_offer: Boolean(draft.specialOffer),
@@ -860,7 +877,7 @@ export function ProductsAdmin() {
         stock: payload.stock,
         description: payload.description,
         brand: payload.brand,
-        features: payload.features,
+        features: appendProductOptionsFeature(payload.features, optionGroups),
         is_featured: payload.is_featured,
         show_on_homepage: payload.show_on_homepage,
         is_special_offer: payload.is_special_offer,
@@ -897,7 +914,7 @@ export function ProductsAdmin() {
       })));
     }
     if (imageResult.error) show(cleanError(imageResult.error), "error");
-    else show(savedWithoutProductOptions ? "Product saved. Run the latest Supabase schema to save size and dimension options." : "Product saved in Supabase", savedWithoutProductOptions ? "error" : "success");
+    else show(savedWithoutProductOptions ? "Product saved in Supabase with option backup storage." : "Product saved in Supabase");
     setDraft(null);
     await loadCategoryOptions();
     await loadProducts();
@@ -1190,7 +1207,14 @@ export function RentalsAdmin() {
 
   const loadRentals = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("rentals").select("*").order("created_at", { ascending: false });
+    let { data, error } = await supabase.from("rentals").select("*, rental_images(image_url, sort_order)").order("created_at", { ascending: false });
+
+    if (error) {
+      const fallback = await supabase.from("rentals").select("*").order("created_at", { ascending: false });
+      data = fallback.data as typeof data;
+      error = fallback.error;
+    }
+
     if (error) show(cleanError(error), "error");
     else setItems(((data ?? []) as RentalRow[]).map(mapRental));
     setLoading(false);
@@ -1208,6 +1232,7 @@ export function RentalsAdmin() {
     if (draft.price_per_day <= 0) return show("Price per day is required", "error");
     if ((draft.price_per_week ?? 0) < 0 || (draft.price_per_month ?? 0) < 0) return show("Rental prices cannot be negative", "error");
     setLoading(true);
+    const images = draft.images?.length ? draft.images : [draft.image || defaultImage];
     const payload = {
       name: draft.name,
       slug: slugify(draft.name),
@@ -1217,14 +1242,33 @@ export function RentalsAdmin() {
       price_per_month: draft.price_per_month || null,
       availability: draft.availability,
       description: draft.description,
-      image_url: draft.image,
+      image_url: images[0] ?? defaultImage,
       is_active: true,
     };
-    const { error } = draft.id ? await supabase.from("rentals").update(payload).eq("id", draft.id) : await supabase.from("rentals").insert(payload);
-    if (error) show(cleanError(error), "error");
+    const result = draft.id
+      ? await supabase.from("rentals").update(payload).eq("id", draft.id).select("id").single()
+      : await supabase.from("rentals").insert(payload).select("id").single();
+    if (result.error) show(cleanError(result.error), "error");
     else {
+      const rentalId = String(result.data.id);
+      let savedGallery = true;
+      const deleteImages = await supabase.from("rental_images").delete().eq("rental_id", rentalId);
+
+      if (deleteImages.error) {
+        savedGallery = false;
+      } else {
+        const imageRows = images.map((image, index) => ({
+          rental_id: rentalId,
+          image_url: image,
+          alt_text: draft.name,
+          sort_order: index,
+        }));
+        const insertImages = await supabase.from("rental_images").insert(imageRows);
+        savedGallery = !insertImages.error;
+      }
+
       setDraft(null);
-      show("Rental saved in Supabase");
+      show(savedGallery ? "Rental saved in Supabase" : "Rental saved. Run latest Supabase schema to enable multiple rental photos.", savedGallery ? "success" : "error");
       await loadRentals();
     }
     setLoading(false);
@@ -1244,18 +1288,19 @@ export function RentalsAdmin() {
   return (
     <div>
       <ToastView toast={toast} />
-      <SectionHeader title="Rentals" description="Live Supabase rentals with day, week and month pricing." action={<Button onClick={() => setDraft({ product_id: "", name: "", category: "Mobility", price_per_day: 0, price_per_week: 0, price_per_month: 0, availability: true, description: "", image: defaultImage })}>Add Rental</Button>} />
+      <SectionHeader title="Rentals" description="Live Supabase rentals with day, week and month pricing." action={<Button onClick={() => setDraft({ product_id: "", name: "", category: "Mobility", price_per_day: 0, price_per_week: 0, price_per_month: 0, availability: true, description: "", image: defaultImage, images: [] })}>Add Rental</Button>} />
       <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <label className="text-sm font-bold text-slate-700">Rental calculator<Input className="mt-2 max-w-xs" type="number" min={1} value={days} onChange={(event) => setDays(Number(event.target.value))} /></label>
       </div>
       {items.length ? (
         <TableShell>
           <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Product", "Category", "Day / Week / Month", "Availability", `${days} day estimate`, "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead>
+            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500"><tr>{["Product", "Photos", "Category", "Day / Week / Month", "Availability", `${days} day estimate`, "Actions"].map((header) => <th key={header} className="px-5 py-3">{header}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
               {items.map((rental) => (
                 <tr key={rental.id ?? rental.product_id} className="hover:bg-slate-50">
                   <td className="px-5 py-4 font-bold text-slate-900">{rental.name}</td>
+                  <td className="px-5 py-4 font-bold text-slate-600">{rental.images.length}</td>
                   <td className="px-5 py-4">{rental.category}</td>
                   <td className="px-5 py-4">
                     <span className="block font-bold">{formatCurrency(rental.price_per_day)}/day</span>
@@ -1271,7 +1316,53 @@ export function RentalsAdmin() {
           </table>
         </TableShell>
       ) : <EmptyState text={loading ? "Loading rentals from Supabase..." : "No rentals in Supabase yet."} />}
-      <Modal open={Boolean(draft)} title="Rental Form" onClose={() => setDraft(null)}>{draft ? <div className="grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><label className="text-sm font-bold text-slate-700">Category<select value={isDefaultRentalCategory(draft.category) ? draft.category : "__new"} onChange={(event) => setDraft({ ...draft, category: event.target.value === "__new" ? "" : event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{defaultCategoryOptions.map((option) => <option key={option.slug} value={option.name}>{option.name}</option>)}<option value="__new">+ Add new category</option></select></label>{!isDefaultRentalCategory(draft.category) ? <label className="text-sm font-bold text-slate-700">New category<Input value={draft.category ?? ""} onChange={(event) => setDraft({ ...draft, category: event.target.value })} placeholder="Example: ICU Bed Rentals" /></label> : null}<label className="text-sm font-bold text-slate-700">Price per day<Input type="number" value={draft.price_per_day} onChange={(event) => setDraft({ ...draft, price_per_day: Number(event.target.value) })} /></label><label className="text-sm font-bold text-slate-700">Price per week<Input type="number" value={draft.price_per_week ?? 0} onChange={(event) => setDraft({ ...draft, price_per_week: Number(event.target.value) })} /></label><label className="text-sm font-bold text-slate-700">Price per month<Input type="number" value={draft.price_per_month ?? 0} onChange={(event) => setDraft({ ...draft, price_per_month: Number(event.target.value) })} /></label><label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.availability} onChange={(event) => setDraft({ ...draft, availability: event.target.checked })} /> Available</label><label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label className="text-sm font-bold text-slate-700 md:col-span-2">Image<Input type="file" accept="image/*" onChange={(event) => readFiles(event.target.files, ([image]) => setDraft({ ...draft, image }))} /></label>{draft.image ? <div className="relative h-24 w-32 overflow-hidden rounded-md bg-slate-100"><Image src={draft.image} alt="Rental preview" fill className="object-contain p-2" /></div> : null}<div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveRental} disabled={loading}>{loading ? "Saving..." : "Save Rental"}</Button></div></div> : null}</Modal>
+      <Modal open={Boolean(draft)} title="Rental Form" onClose={() => setDraft(null)}>
+        {draft ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-bold text-slate-700">Name<Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+            <label className="text-sm font-bold text-slate-700">Category<select value={isDefaultRentalCategory(draft.category) ? draft.category : "__new"} onChange={(event) => setDraft({ ...draft, category: event.target.value === "__new" ? "" : event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm">{defaultCategoryOptions.map((option) => <option key={option.slug} value={option.name}>{option.name}</option>)}<option value="__new">+ Add new category</option></select></label>
+            {!isDefaultRentalCategory(draft.category) ? <label className="text-sm font-bold text-slate-700">New category<Input value={draft.category ?? ""} onChange={(event) => setDraft({ ...draft, category: event.target.value })} placeholder="Example: ICU Bed Rentals" /></label> : null}
+            <label className="text-sm font-bold text-slate-700">Price per day<Input type="number" value={draft.price_per_day} onChange={(event) => setDraft({ ...draft, price_per_day: Number(event.target.value) })} /></label>
+            <label className="text-sm font-bold text-slate-700">Price per week<Input type="number" value={draft.price_per_week ?? 0} onChange={(event) => setDraft({ ...draft, price_per_week: Number(event.target.value) })} /></label>
+            <label className="text-sm font-bold text-slate-700">Price per month<Input type="number" value={draft.price_per_month ?? 0} onChange={(event) => setDraft({ ...draft, price_per_month: Number(event.target.value) })} /></label>
+            <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={draft.availability} onChange={(event) => setDraft({ ...draft, availability: event.target.checked })} /> Available</label>
+            <label className="text-sm font-bold text-slate-700 md:col-span-2">Description<Textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:col-span-2">
+              <div>
+                <p className="text-sm font-black text-slate-800">Rental Photos</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">First photo is primary. Add multiple photos and arrange them for the rental detail page.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {(draft.images ?? []).map((image, index) => (
+                  <div key={`${image}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-white">
+                      <Image src={image} alt={`Rental preview ${index + 1}`} fill className="object-contain p-2" />
+                    </div>
+                    <p className="mt-2 text-xs font-black text-slate-700">Photo {index + 1}{index === 0 ? " · Primary" : ""}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button type="button" variant="ghost" className="h-8 px-2 text-xs" onClick={() => setDraft({ ...draft, images: moveItem(draft.images ?? [], index, -1) })}>Up</Button>
+                      <Button type="button" variant="ghost" className="h-8 px-2 text-xs" onClick={() => setDraft({ ...draft, images: moveItem(draft.images ?? [], index, 1) })}>Down</Button>
+                      <Button type="button" variant="danger" className="h-8 px-2 text-xs" onClick={() => {
+                        const nextImages = (draft.images ?? []).filter((_, itemIndex) => itemIndex !== index);
+                        setDraft({ ...draft, images: nextImages, image: nextImages[0] ?? defaultImage });
+                      }}>Remove</Button>
+                    </div>
+                  </div>
+                ))}
+                <label className="grid min-h-36 cursor-pointer place-items-center rounded-lg border border-dashed border-[#047068]/35 bg-[#047068]/5 p-4 text-center text-sm font-black text-[#047068] transition hover:bg-[#047068]/10">
+                  <span className="text-3xl leading-none">+</span>
+                  <span>Add photos</span>
+                  <Input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => readFiles(event.target.files, (images) => {
+                    const nextImages = [...(draft.images ?? []), ...images];
+                    setDraft({ ...draft, images: nextImages, image: nextImages[0] ?? draft.image });
+                  })} />
+                </label>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 md:col-span-2"><Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button><Button onClick={saveRental} disabled={loading}>{loading ? "Saving..." : "Save Rental"}</Button></div>
+          </div>
+        ) : null}
+      </Modal>
       <ConfirmModal open={Boolean(deleting)} title="Delete rental?" message={`Delete ${deleting?.name ?? "this rental"} from Supabase?`} onCancel={() => setDeleting(null)} onConfirm={deleteRental} />
     </div>
   );
@@ -1461,10 +1552,6 @@ export function BlogsAdmin() {
                 <p className="text-sm font-black text-slate-800">Blog Photos</p>
                 <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">First photo is primary. Use Up and Down to arrange priority.</p>
               </div>
-              <label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-[#047068]/20 bg-white px-4 text-sm font-black text-[#047068] shadow-sm transition hover:bg-[#eef8f6]">
-                + Add photos
-                <Input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => readFiles(event.target.files, (images) => setDraft({ ...draft, images: [...(draft.images ?? []), ...images], image: draft.images?.[0] ?? images[0] ?? draft.image }))} />
-              </label>
               {draft.images?.length ? (
                 <div className="grid gap-3">
                   {draft.images.map((image, index) => (
@@ -1483,8 +1570,19 @@ export function BlogsAdmin() {
                       </div>
                     </div>
                   ))}
+                  <label className="grid min-h-24 cursor-pointer place-items-center rounded-lg border border-dashed border-[#047068]/35 bg-[#047068]/5 p-4 text-center text-sm font-black text-[#047068] transition hover:bg-[#047068]/10">
+                    <span className="text-3xl leading-none">+</span>
+                    <span>Add more photos</span>
+                    <Input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => readFiles(event.target.files, (images) => setDraft({ ...draft, images: [...(draft.images ?? []), ...images], image: draft.images?.[0] ?? images[0] ?? draft.image }))} />
+                  </label>
                 </div>
-              ) : null}
+              ) : (
+                <label className="grid min-h-28 cursor-pointer place-items-center rounded-lg border border-dashed border-[#047068]/35 bg-[#047068]/5 p-4 text-center text-sm font-black text-[#047068] transition hover:bg-[#047068]/10">
+                  <span className="text-3xl leading-none">+</span>
+                  <span>Add blog photos</span>
+                  <Input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => readFiles(event.target.files, (images) => setDraft({ ...draft, images: [...(draft.images ?? []), ...images], image: draft.images?.[0] ?? images[0] ?? draft.image }))} />
+                </label>
+              )}
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button>

@@ -1,5 +1,7 @@
 import type { ProductOptionGroup } from "@/types";
 
+const PRODUCT_OPTIONS_FEATURE_PREFIX = "__product_options_json:";
+
 export const PRODUCT_OPTION_PRESETS: ProductOptionGroup[] = [
   {
     name: "Size",
@@ -44,6 +46,25 @@ export function normalizeProductOptions(value: unknown): ProductOptionGroup[] {
       return name && values.length ? { name, values } : null;
     })
     .filter((group): group is ProductOptionGroup => Boolean(group));
+}
+
+export function getProductOptions(value: unknown, features?: string[] | null): ProductOptionGroup[] {
+  const direct = normalizeProductOptions(value);
+  if (direct.length) return direct;
+
+  const encoded = features?.find((feature) => feature.startsWith(PRODUCT_OPTIONS_FEATURE_PREFIX));
+  return encoded ? normalizeProductOptions(encoded.slice(PRODUCT_OPTIONS_FEATURE_PREFIX.length)) : [];
+}
+
+export function cleanProductFeatures(features?: string[] | null) {
+  return (features ?? []).filter((feature) => !feature.startsWith(PRODUCT_OPTIONS_FEATURE_PREFIX));
+}
+
+export function appendProductOptionsFeature(features: string[], groups: ProductOptionGroup[]) {
+  const cleaned = cleanProductFeatures(features);
+  const normalized = normalizeProductOptions(groups);
+  if (!normalized.length) return cleaned;
+  return [...cleaned, `${PRODUCT_OPTIONS_FEATURE_PREFIX}${JSON.stringify(normalized)}`];
 }
 
 function parseJson(value: string) {

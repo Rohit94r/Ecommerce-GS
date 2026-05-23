@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useCart } from "@/hooks/useCart";
+import { getCartProductKey, getSelectedOptionsText } from "@/lib/cart";
 import { business } from "@/lib/dummyData";
 import type { Product } from "@/types";
 
@@ -14,10 +15,17 @@ export function CommerceProductActions({
   inStock: boolean;
 }) {
   const { addItem, items } = useCart();
-  const cartQuantity = items.find((item) => item.product.id === cartProduct.id)?.quantity ?? 0;
+  const productKey = getCartProductKey(cartProduct);
+  const cartQuantity = items.find((item) => getCartProductKey(item.product) === productKey)?.quantity ?? 0;
+  const selectedOptionsText = getSelectedOptionsText(cartProduct);
 
   return (
     <div className="mt-8 grid gap-3">
+      {selectedOptionsText ? (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+          Selected options: <span className="text-slate-950">{selectedOptionsText}</span>
+        </div>
+      ) : null}
       {cartQuantity > 0 ? (
         <div className="rounded-lg border border-[#047068]/20 bg-[#047068]/10 px-4 py-3 text-sm font-black text-[#047068]">
           Added to cart: {cartQuantity} item{cartQuantity > 1 ? "s" : ""}

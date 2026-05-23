@@ -80,6 +80,30 @@ async function getBlogMedia(blogId: string, index: number): Promise<MediaRow | n
   return data as MediaRow;
 }
 
+async function getRentalMedia(rentalId: string, index: number): Promise<MediaRow | null> {
+  const supabase = createPublicClient();
+  const galleryResult = await supabase
+    .from("rental_images")
+    .select("image_url")
+    .eq("rental_id", rentalId)
+    .order("sort_order", { ascending: true })
+    .range(index, index)
+    .maybeSingle();
+
+  if (!galleryResult.error && galleryResult.data) return galleryResult.data as MediaRow;
+  if (index !== 0) return null;
+
+  const { data, error } = await supabase
+    .from("rentals")
+    .select("image_url")
+    .eq("id", rentalId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as MediaRow;
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ kind: string; id: string; index: string }> }) {
   const { kind, id, index } = await params;
   const mediaIndex = Number(index);
@@ -92,7 +116,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ kind
     ? await getProductMedia(id, mediaIndex)
     : kind === "blog"
       ? await getBlogMedia(id, mediaIndex)
-      : null;
+      : kind === "rental"
+        ? await getRentalMedia(id, mediaIndex)
+        : null;
 
   if (!media?.image_url) return new Response("Media not found", { status: 404 });
 

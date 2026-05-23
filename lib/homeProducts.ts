@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { isVideoMediaUrl } from "@/lib/catalog";
 import { isDataUrl, productMediaRoute } from "@/lib/media";
-import { normalizeProductOptions } from "@/lib/productOptions";
+import { cleanProductFeatures, getProductOptions } from "@/lib/productOptions";
 import type { Product, ProductCategory, ProductMedia } from "@/types";
 import { createPublicClient } from "@/utils/supabase/public";
 
@@ -57,9 +57,9 @@ function toProduct(row: HomeProductRow): Product {
     media: media.length ? media : [{ type: "image", url: defaultImage }],
     detailHref,
     description: row.description ?? "",
-    features: row.features ?? [],
+    features: cleanProductFeatures(row.features),
     brand: row.brand ?? "Gargi Care",
-    options: normalizeProductOptions(row.product_options),
+    options: getProductOptions(row.product_options, row.features),
     isRental: Boolean(row.is_rental),
     featured: Boolean(row.is_featured),
     showOnHomepage: Boolean(row.show_on_homepage),

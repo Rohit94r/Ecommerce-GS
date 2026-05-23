@@ -66,6 +66,7 @@ export type Product = {
   features: string[];
   brand: string;
   options?: ProductOptionGroup[];
+  selectedOptions?: Record<string, string>;
   showOnHomepage?: boolean;
   specialOffer?: boolean;
   featured?: boolean;

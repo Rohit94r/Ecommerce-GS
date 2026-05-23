@@ -6,13 +6,15 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { OutOfStockWatermark } from "@/components/product/catalog/OutOfStockWatermark";
 import { useCart } from "@/hooks/useCart";
+import { getCartProductKey } from "@/lib/cart";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem, items } = useCart();
   const discountedPrice = product.price - Math.round((product.price * product.discount) / 100);
-  const cartQuantity = items.find((item) => item.product.id === product.id)?.quantity ?? 0;
+  const productKey = getCartProductKey(product);
+  const cartQuantity = items.find((item) => getCartProductKey(item.product) === productKey)?.quantity ?? 0;
 
   const href = "/products";
 

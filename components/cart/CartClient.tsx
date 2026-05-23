@@ -6,6 +6,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useCart } from "@/hooks/useCart";
 import { calculateOrderBilling } from "@/lib/billing";
+import { getCartProductKey, getSelectedOptionEntries } from "@/lib/cart";
 import { formatCurrency } from "@/lib/utils";
 
 export function CartClient() {
@@ -25,32 +26,46 @@ export function CartClient() {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <section className="space-y-4">
-        {items.map((item) => (
-          <article key={item.product.id} className="grid gap-4 rounded-md border border-[#047068]/15 bg-white p-4 shadow-sm sm:grid-cols-[120px_1fr_auto]">
-            <div className="relative aspect-square overflow-hidden rounded-md bg-slate-100">
-              <Image src={item.product.images[0]} alt={item.product.name} fill sizes="120px" className="object-contain p-2" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-950">{item.product.name}</h2>
-              <p className="mt-1 text-sm text-slate-500">{item.product.category}</p>
-              <p className="mt-3 font-black text-[#047068]">{formatCurrency(item.product.price)}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-500">Line total: {formatCurrency(item.product.price * item.quantity)}</p>
-            </div>
-            <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-              <Input
-                aria-label={`Quantity for ${item.product.name}`}
-                className="w-24"
-                min={1}
-                type="number"
-                value={item.quantity}
-                onChange={(event) => updateQuantity(item.product.id, Number(event.target.value))}
-              />
-              <Button onClick={() => removeItem(item.product.id)} variant="ghost">
-                Remove
-              </Button>
-            </div>
-          </article>
-        ))}
+        {items.map((item) => {
+          const itemKey = getCartProductKey(item.product);
+          const selectedOptions = getSelectedOptionEntries(item.product);
+
+          return (
+            <article key={itemKey} className="grid gap-4 rounded-md border border-[#047068]/15 bg-white p-4 shadow-sm sm:grid-cols-[120px_1fr_auto]">
+              <div className="relative aspect-square overflow-hidden rounded-md bg-slate-100">
+                <Image src={item.product.images[0]} alt={item.product.name} fill sizes="120px" className="object-contain p-2" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">{item.product.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">{item.product.category}</p>
+                {selectedOptions.length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedOptions.map(([name, value]) => (
+                      <span key={`${name}-${value}`} className="rounded-full bg-[#047068]/10 px-3 py-1 text-xs font-black text-[#047068]">
+                        {name}: {value}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="mt-3 font-black text-[#047068]">{formatCurrency(item.product.price)}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-500">Line total: {formatCurrency(item.product.price * item.quantity)}</p>
+              </div>
+              <div className="flex items-center gap-3 sm:flex-col sm:items-end">
+                <Input
+                  aria-label={`Quantity for ${item.product.name}`}
+                  className="w-24"
+                  min={1}
+                  type="number"
+                  value={item.quantity}
+                  onChange={(event) => updateQuantity(itemKey, Number(event.target.value))}
+                />
+                <Button onClick={() => removeItem(itemKey)} variant="ghost">
+                  Remove
+                </Button>
+              </div>
+            </article>
+          );
+        })}
       </section>
       <aside className="h-fit rounded-md border border-[#047068]/15 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-black text-slate-950">Invoice summary</h2>
