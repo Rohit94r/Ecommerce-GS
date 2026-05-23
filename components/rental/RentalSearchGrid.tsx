@@ -26,7 +26,7 @@ export function RentalSearchGrid({ rentals, products }: { rentals: Rental[]; pro
       {rentalProducts.length ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {rentalProducts.map(({ rental, product }) => (
-            <RentalCard key={rental.product_id} product={product} rental={rental} />
+            <RentalCard key={rental.id ?? rental.product_id} product={product} rental={rental} />
           ))}
         </div>
       ) : (

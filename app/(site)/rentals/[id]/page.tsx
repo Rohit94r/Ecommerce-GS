@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { ProductMediaGallery } from "@/components/product/catalog/ProductMediaGallery";
 import { ProductOptionGroups } from "@/components/product/catalog/ProductOptionGroups";
@@ -16,6 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function RentalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await connection();
   const { id } = await params;
   const item = await getActiveRental(id);
   if (!item) notFound();

@@ -88,6 +88,7 @@ export type Order = {
 };
 
 export type Rental = {
+  id?: string;
   product_id: string;
   price_per_day: number;
   price_per_week?: number;

@@ -75,6 +75,7 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
   return {
     product,
     rental: {
+      id: row.id,
       product_id: product.id,
       price_per_day: Number(row.price_per_day),
       price_per_week: row.price_per_week ? Number(row.price_per_week) : undefined,
@@ -83,6 +84,10 @@ function mapRental(row: RentalRow): { product: Product; rental: Rental } {
       category: (productRow?.category ?? row.category ?? "Mobility") as ProductCategory,
     },
   };
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 async function fetchActiveRentals() {
@@ -113,9 +118,36 @@ async function fetchActiveRentals() {
 }
 
 async function fetchActiveRental(id: string) {
-  const rentals = await getActiveRentals();
-  return rentals.find((item) => item.product.id === id || item.rental.product_id === id) ?? null;
+  if (!isUuid(id)) return null;
+
+  try {
+    const supabase = createPublicClient();
+    const result = await supabase
+      .from("rentals")
+      .select("*, rental_images(image_url, sort_order), products(*, product_images(sort_order, media_type))")
+      .eq("is_active", true)
+      .or(`id.eq.${id},product_id.eq.${id}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (!result.error && result.data) return mapRental(result.data as unknown as RentalRow);
+
+    const fallback = await supabase
+      .from("rentals")
+      .select("*, products(*, product_images(sort_order, media_type))")
+      .eq("is_active", true)
+      .or(`id.eq.${id},product_id.eq.${id}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (fallback.error || !fallback.data) return null;
+    return mapRental(fallback.data as unknown as RentalRow);
+  } catch {
+    return null;
+  }
 }
 
 export const getActiveRentals = unstable_cache(fetchActiveRentals, ["active-rentals"], rentalsCache);
-export const getActiveRental = unstable_cache(fetchActiveRental, ["active-rental"], rentalsCache);
+export async function getActiveRental(id: string) {
+  return fetchActiveRental(id);
+}
